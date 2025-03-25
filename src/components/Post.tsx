@@ -2,9 +2,8 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Ghost, Heart, MessageSquare, Share } from "lucide-react";
+import { Ghost, Heart, MessageSquare, Share, Bookmark } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface PostProps {
@@ -15,6 +14,7 @@ interface PostProps {
   timestamp: string;
   initialLikes: number;
   initialComments: Comment[];
+  image?: string;
 }
 
 export interface Comment {
@@ -25,7 +25,7 @@ export interface Comment {
   timestamp: string;
 }
 
-const Post = ({ id, avatar, nickname, content, timestamp, initialLikes, initialComments }: PostProps) => {
+const Post = ({ id, avatar, nickname, content, timestamp, initialLikes, initialComments, image }: PostProps) => {
   const [liked, setLiked] = useState(false);
   const [likes, setLikes] = useState(initialLikes);
   const [showComments, setShowComments] = useState(false);
@@ -58,13 +58,13 @@ const Post = ({ id, avatar, nickname, content, timestamp, initialLikes, initialC
   };
 
   return (
-    <Card className="w-full mb-4 overflow-hidden hover:shadow-md transition-shadow">
+    <Card className="w-full mb-4 overflow-hidden hover:shadow-md transition-shadow bg-secondary/10 rounded-xl">
       <CardContent className="pt-6">
         <div className="flex items-start mb-4">
           <div className="flex items-center gap-3">
             <Avatar className="w-10 h-10 border-2 border-primary/10 p-0.5">
-              <div className="flex items-center justify-center w-full h-full bg-primary/10 rounded-full">
-                <Ghost className="w-5 h-5 text-primary" />
+              <div className="flex items-center justify-center w-full h-full bg-orange-400 rounded-full">
+                <Ghost className="w-5 h-5 text-white" />
               </div>
             </Avatar>
             <div>
@@ -77,6 +77,16 @@ const Post = ({ id, avatar, nickname, content, timestamp, initialLikes, initialC
           </div>
         </div>
         <p className="text-sm mb-4">{content}</p>
+        
+        {image && (
+          <div className="relative w-full h-80 rounded-lg overflow-hidden mb-4">
+            <img 
+              src={image} 
+              alt="Post content" 
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
       </CardContent>
       <CardFooter className="flex-col p-0">
         <div className="flex justify-between items-center w-full px-6 py-3 border-t">
@@ -87,7 +97,7 @@ const Post = ({ id, avatar, nickname, content, timestamp, initialLikes, initialC
               className="flex items-center gap-1 text-muted-foreground hover:text-primary"
               onClick={handleLike}
             >
-              <Heart className={`w-4 h-4 ${liked ? 'fill-primary text-primary' : ''}`} />
+              <Heart className={`w-4 h-4 ${liked ? 'fill-red-500 text-red-500' : ''}`} />
               <span className="text-xs">{likes}</span>
             </Button>
             <Button 
@@ -103,6 +113,9 @@ const Post = ({ id, avatar, nickname, content, timestamp, initialLikes, initialC
               <Share className="w-4 h-4" />
             </Button>
           </div>
+          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
+            <Bookmark className="w-4 h-4" />
+          </Button>
         </div>
         
         {showComments && (
