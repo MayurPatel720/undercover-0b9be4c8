@@ -65,7 +65,7 @@ const POSTS = [
         id: 'c5',
         avatar: '/avatar8.png',
         nickname: 'CipherEcho',
-        content: 'I've been meaning to read that. Is it as life-changing as everyone says?',
+        content: 'I\'ve been meaning to read that. Is it as life-changing as everyone says?',
         timestamp: '18 hours ago'
       },
       {
@@ -105,7 +105,7 @@ const POSTS = [
     id: '5',
     avatar: '/avatar13.png',
     nickname: 'DuskWanderer',
-    content: 'Anyone else feel like they're living two separate lives sometimes? The public persona vs. who you really are when nobody's watching...',
+    content: 'Anyone else feel like they\'re living two separate lives sometimes? The public persona vs. who you really are when nobody\'s watching...',
     timestamp: '6 hours ago',
     likes: 215,
     comments: [
@@ -113,7 +113,7 @@ const POSTS = [
         id: 'c9',
         avatar: '/avatar14.png',
         nickname: 'MaskedThinker',
-        content: 'All the time. That's why I love this app - I can be myself without the weight of my public image.',
+        content: 'All the time. That\'s why I love this app - I can be myself without the weight of my public image.',
         timestamp: '5 hours ago'
       },
       {
