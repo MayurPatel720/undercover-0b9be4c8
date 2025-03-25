@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, Grid, MessageCircle, Zap, User } from 'lucide-react';
+import { Home, Grid, MessageCircle, Zap, User, Sparkles } from 'lucide-react';
 
 const Footer = () => {
   return (
@@ -16,14 +16,14 @@ const Footer = () => {
       </button>
       
       <div className="flex items-center justify-center -mt-10">
-        <div className="w-14 h-14 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+        <div className="w-14 h-14 rounded-full gradient-primary flex items-center justify-center shadow-lg">
           <MessageCircle className="w-7 h-7 text-white" />
         </div>
       </div>
       
       <button className="flex flex-col items-center justify-center text-muted-foreground">
-        <Zap className="w-6 h-6" />
-        <span className="text-xs mt-1">Activity</span>
+        <Sparkles className="w-6 h-6" />
+        <span className="text-xs mt-1">Trending</span>
       </button>
       
       <button className="flex flex-col items-center justify-center text-muted-foreground">

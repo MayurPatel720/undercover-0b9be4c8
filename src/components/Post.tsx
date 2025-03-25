@@ -1,21 +1,10 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Ghost, Heart, MessageSquare, Share, Bookmark } from "lucide-react";
-import { Avatar } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
-
-interface PostProps {
-  id: string;
-  avatar: string;
-  nickname: string;
-  content: string;
-  timestamp: string;
-  initialLikes: number;
-  initialComments: Comment[];
-  image?: string;
-}
+import { Heart, MessageCircle, Share2, MoreHorizontal, Sparkles } from 'lucide-react';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Avatar } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export interface Comment {
   id: string;
@@ -25,11 +14,31 @@ export interface Comment {
   timestamp: string;
 }
 
-const Post = ({ id, avatar, nickname, content, timestamp, initialLikes, initialComments, image }: PostProps) => {
-  const [liked, setLiked] = useState(false);
+interface PostProps {
+  id: string;
+  avatar: string;
+  nickname: string;
+  content: string;
+  image?: string;
+  timestamp: string;
+  initialLikes: number;
+  initialComments: Comment[];
+}
+
+const Post: React.FC<PostProps> = ({
+  id,
+  avatar,
+  nickname,
+  content,
+  image,
+  timestamp,
+  initialLikes,
+  initialComments
+}) => {
   const [likes, setLikes] = useState(initialLikes);
+  const [liked, setLiked] = useState(false);
+  const [comments, setComments] = useState(initialComments);
   const [showComments, setShowComments] = useState(false);
-  const [comments, setComments] = useState<Comment[]>(initialComments);
   const [newComment, setNewComment] = useState('');
 
   const handleLike = () => {
@@ -43,110 +52,137 @@ const Post = ({ id, avatar, nickname, content, timestamp, initialLikes, initialC
 
   const handleAddComment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
-    
-    const comment: Comment = {
-      id: `comment-${Date.now()}`,
-      avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=mystery',
-      nickname: 'Anonymous User',
-      content: newComment,
-      timestamp: 'Just now'
-    };
-
-    setComments(prev => [comment, ...prev]);
-    setNewComment('');
+    if (newComment.trim()) {
+      const comment: Comment = {
+        id: `new-${Date.now()}`,
+        avatar: 'https://source.unsplash.com/random/100x100/?face,me',
+        nickname: 'You',
+        content: newComment,
+        timestamp: 'Just now'
+      };
+      setComments(prev => [comment, ...prev]);
+      setNewComment('');
+    }
   };
 
   return (
-    <Card className="w-full mb-4 overflow-hidden hover:shadow-md transition-shadow bg-secondary/10 rounded-xl">
-      <CardContent className="pt-6">
-        <div className="flex items-start mb-4">
-          <div className="flex items-center gap-3">
-            <Avatar className="w-10 h-10 border-2 border-primary/10 p-0.5">
-              <div className="flex items-center justify-center w-full h-full bg-orange-400 rounded-full">
-                <Ghost className="w-5 h-5 text-white" />
-              </div>
-            </Avatar>
-            <div>
-              <div className="font-semibold text-sm flex items-center gap-2">
-                {nickname}
-                <span className="bg-secondary text-xs px-2 py-0.5 rounded-full">Mystery User</span>
-              </div>
-              <div className="text-muted-foreground text-xs">{timestamp}</div>
+    <Card className="mb-4 border-0 shadow-md overflow-hidden bg-white rounded-2xl">
+      <CardHeader className="p-4 pb-2 flex flex-row items-center space-y-0">
+        <div className="flex items-center space-x-3 flex-1">
+          <div className="w-10 h-10 rounded-full p-0.5 gradient-primary">
+            <div className="w-full h-full bg-white rounded-full overflow-hidden">
+              <img 
+                src={avatar} 
+                alt={nickname} 
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = 'https://source.unsplash.com/random/100x100/?face';
+                }}
+              />
             </div>
           </div>
+          <div className="flex flex-col">
+            <div className="flex items-center">
+              <span className="font-semibold">{nickname}</span>
+              {Math.random() > 0.5 && (
+                <span className="ml-1">
+                  <Sparkles className="w-3 h-3 text-primary" />
+                </span>
+              )}
+            </div>
+            <span className="text-xs text-muted-foreground">{timestamp}</span>
+          </div>
         </div>
-        <p className="text-sm mb-4">{content}</p>
-        
+        <Button variant="ghost" size="icon" className="rounded-full">
+          <MoreHorizontal className="h-5 w-5" />
+        </Button>
+      </CardHeader>
+      
+      <CardContent className="p-4 pt-2">
+        <p className="text-sm mb-3">{content}</p>
         {image && (
-          <div className="relative w-full h-80 rounded-lg overflow-hidden mb-4">
+          <div className="rounded-xl overflow-hidden mb-2">
             <img 
               src={image} 
               alt="Post content" 
-              className="w-full h-full object-cover"
+              className="w-full h-auto object-cover"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = 'https://source.unsplash.com/random/600x400/?abstract';
+              }}
             />
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex-col p-0">
-        <div className="flex justify-between items-center w-full px-6 py-3 border-t">
-          <div className="flex items-center gap-6">
+      
+      <CardFooter className="p-0 flex flex-col">
+        <div className="flex items-center justify-between px-4 py-2 border-t border-border">
+          <div className="flex items-center space-x-2">
             <Button 
               variant="ghost" 
               size="sm" 
-              className="flex items-center gap-1 text-muted-foreground hover:text-primary"
+              className={`rounded-full flex items-center ${liked ? 'text-red-500' : ''}`}
               onClick={handleLike}
             >
-              <Heart className={`w-4 h-4 ${liked ? 'fill-red-500 text-red-500' : ''}`} />
-              <span className="text-xs">{likes}</span>
+              <Heart className={`h-5 w-5 ${liked ? 'fill-red-500' : ''}`} />
+              <span className="ml-1">{likes}</span>
             </Button>
             <Button 
               variant="ghost" 
               size="sm" 
-              className="flex items-center gap-1 text-muted-foreground hover:text-primary"
+              className="rounded-full flex items-center"
               onClick={() => setShowComments(!showComments)}
             >
-              <MessageSquare className="w-4 h-4" />
-              <span className="text-xs">{comments.length}</span>
-            </Button>
-            <Button variant="ghost" size="sm" className="flex items-center gap-1 text-muted-foreground hover:text-primary">
-              <Share className="w-4 h-4" />
+              <MessageCircle className="h-5 w-5" />
+              <span className="ml-1">{comments.length}</span>
             </Button>
           </div>
-          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
-            <Bookmark className="w-4 h-4" />
+          <Button variant="ghost" size="sm" className="rounded-full">
+            <Share2 className="h-5 w-5" />
           </Button>
         </div>
         
         {showComments && (
-          <div className="w-full px-6 py-3 bg-secondary/30">
-            <form onSubmit={handleAddComment} className="flex gap-2 mb-3">
+          <div className="px-4 py-2 border-t border-border w-full">
+            <form onSubmit={handleAddComment} className="flex mb-3">
               <input
                 type="text"
-                placeholder="Add a comment..."
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Add a comment..."
+                className="flex-1 bg-muted rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
               />
-              <Button type="submit" size="sm">Post</Button>
+              <Button 
+                type="submit" 
+                variant="ghost" 
+                className="rounded-full ml-2 bg-primary/10 text-primary hover:bg-primary/20"
+                disabled={!newComment.trim()}
+              >
+                Post
+              </Button>
             </form>
             
-            <ScrollArea className="h-48 w-full">
-              {comments.map((comment) => (
-                <div key={comment.id} className="mb-3 pb-3 border-b last:border-b-0">
-                  <div className="flex items-start gap-2">
-                    <Avatar className="w-6 h-6">
-                      <div className="flex items-center justify-center w-full h-full bg-primary/10 rounded-full">
-                        <Ghost className="w-3 h-3 text-primary" />
-                      </div>
-                    </Avatar>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium">{comment.nickname}</span>
-                        <span className="text-xs text-muted-foreground">{comment.timestamp}</span>
-                      </div>
+            <ScrollArea className="max-h-60 overflow-y-auto">
+              {comments.map(comment => (
+                <div key={comment.id} className="flex items-start space-x-2 mb-3">
+                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                    <img 
+                      src={comment.avatar} 
+                      alt={comment.nickname} 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = 'https://source.unsplash.com/random/100x100/?face';
+                      }}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <div className="bg-muted rounded-2xl px-3 py-2">
+                      <div className="font-medium text-xs">{comment.nickname}</div>
                       <p className="text-sm">{comment.content}</p>
                     </div>
+                    <div className="text-xs text-muted-foreground mt-1">{comment.timestamp}</div>
                   </div>
                 </div>
               ))}
