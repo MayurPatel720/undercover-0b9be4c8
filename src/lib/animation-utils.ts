@@ -11,14 +11,14 @@ export const scaleIn = (delay: number = 0) =>
 
 export const generateRandomGradient = () => {
   const gradients = [
-    "bg-gradient-to-r from-purple-500 to-pink-500",
-    "bg-gradient-to-r from-blue-500 to-cyan-400",
-    "bg-gradient-to-r from-orange-400 to-pink-500",
-    "bg-gradient-to-r from-green-400 to-cyan-500",
-    "bg-gradient-to-r from-pink-500 to-yellow-400",
-    "bg-gradient-to-r from-indigo-500 to-purple-500",
-    "bg-gradient-to-r from-rose-400 to-orange-300",
-    "bg-gradient-to-r from-fuchsia-500 to-cyan-500",
+    "bg-gradient-to-r from-[#1a365d] to-[#2d6b96]",
+    "bg-gradient-to-r from-[#2d6b96] to-[#1a365d]",
+    "bg-gradient-to-r from-[#2d6b96] to-[#1a365d]/80",
+    "bg-gradient-to-r from-[#1a365d] to-[#1a365d]/80",
+    "bg-gradient-to-r from-[#1a365d]/90 to-[#2d6b96]",
+    "bg-gradient-to-r from-[#1a365d] to-[#2d6b96]/90",
+    "bg-gradient-to-r from-[#1a365d]/80 to-[#2d6b96]/90",
+    "bg-gradient-to-r from-[#2d6b96]/90 to-[#1a365d]/80",
   ];
   
   return gradients[Math.floor(Math.random() * gradients.length)];

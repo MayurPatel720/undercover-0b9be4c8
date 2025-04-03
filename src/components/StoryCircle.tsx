@@ -11,7 +11,7 @@ const StoryCircle: React.FC<StoryCircleProps> = ({ avatar, name, hasUnseenStory 
   return (
     <div className="flex flex-col items-center space-y-1 mx-2">
       <div className={`w-16 h-16 rounded-full p-0.5 ${hasUnseenStory ? 'gradient-primary' : 'bg-muted'}`}>
-        <div className="w-full h-full bg-white rounded-full overflow-hidden">
+        <div className="w-full h-full bg-secondary rounded-full overflow-hidden">
           <img 
             src={avatar} 
             alt={name}

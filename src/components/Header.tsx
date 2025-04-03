@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Ghost, Search, Bell, User, Sparkles } from "lucide-react";
+import { Search, Bell, User, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Header = () => {
@@ -10,8 +10,12 @@ const Header = () => {
       <div className="container flex items-center justify-between h-16 px-4 md:px-6">
         <div className="flex items-center gap-2">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full gradient-primary flex items-center justify-center">
-              <Ghost className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 rounded-full overflow-hidden">
+              <img 
+                src="/lovable-uploads/fccb3afb-a582-41d0-8725-446ba5ee2391.png" 
+                alt="Undercover" 
+                className="w-full h-full object-contain"
+              />
             </div>
             <span className="text-xl font-bold tracking-tight text-gradient">Undercover</span>
           </Link>
@@ -26,8 +30,8 @@ const Header = () => {
           <Button variant="ghost" size="icon" className="rounded-full hover:bg-accent/10">
             <Sparkles className="w-5 h-5" />
           </Button>
-          <Button className="w-10 h-10 p-0 rounded-full gradient-secondary">
-            <User className="w-5 h-5 text-white" />
+          <Button className="w-10 h-10 p-0 rounded-full gradient-primary">
+            <User className="w-5 h-5 text-accent" />
           </Button>
         </div>
       </div>
