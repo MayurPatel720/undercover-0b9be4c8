@@ -83,13 +83,13 @@ const Chat: React.FC = () => {
       const names = ['John', 'Sarah', 'Alex', 'Emma', 'Mike'];
       const randomName = names[Math.floor(Math.random() * names.length)];
       const responses = [
-        'That's cool! 😎',
-        'I like your perspective on that!',
-        'Thanks for sharing! How's your day going?',
-        'Interesting! Tell me more about it.',
-        'I agree with you on that!',
-        'That's a great point! 👍',
-        'Have you seen the latest updates?'
+        "That's cool! 😎",
+        "I like your perspective on that!",
+        "Thanks for sharing! How's your day going?",
+        "Interesting! Tell me more about it.",
+        "I agree with you on that!",
+        "That's a great point! 👍",
+        "Have you seen the latest updates?"
       ];
       const randomResponse = responses[Math.floor(Math.random() * responses.length)];
       
