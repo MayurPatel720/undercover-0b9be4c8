@@ -93,6 +93,20 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Improve text readability */
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-foreground font-semibold;
+  }
+
+  p {
+    @apply text-foreground;
+  }
+
+  /* Add text shadow for better contrast on images */
+  .text-on-image {
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  }
 }
 
 @layer utilities {
@@ -114,5 +128,20 @@
   
   .text-gradient {
     @apply bg-gradient-to-br from-[#f0d9a5] via-[#f0d9a5] to-[#d6b880] bg-clip-text text-transparent;
+  }
+
+  /* Improved image placeholders */
+  .img-placeholder {
+    @apply bg-gradient-to-br from-muted to-muted/50 animate-pulse;
+  }
+
+  /* Scrollbar utilities */
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }

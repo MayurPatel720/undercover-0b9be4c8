@@ -143,10 +143,10 @@ const POSTS = [
 const Feed = () => {
   return (
     <ScrollArea className="h-[calc(100vh-80px)] w-full">
-      <div className="w-full border-b border-border">
+      <div className="w-full border-b border-border bg-white/5 backdrop-blur-sm">
         <StoriesRow />
       </div>
-      <div className="max-w-lg mx-auto py-3">
+      <div className="max-w-lg mx-auto py-3 px-4">
         {POSTS.map(post => (
           <Post
             key={post.id}

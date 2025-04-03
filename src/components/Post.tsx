@@ -66,7 +66,7 @@ const Post: React.FC<PostProps> = ({
   };
 
   return (
-    <Card className="mb-4 border-0 shadow-md overflow-hidden bg-white rounded-2xl">
+    <Card className="mb-4 border-0 shadow-md overflow-hidden bg-white dark:bg-card rounded-2xl">
       <CardHeader className="p-4 pb-2 flex flex-row items-center space-y-0">
         <div className="flex items-center space-x-3 flex-1">
           <div className="w-10 h-10 rounded-full p-0.5 gradient-primary">
@@ -84,14 +84,14 @@ const Post: React.FC<PostProps> = ({
           </div>
           <div className="flex flex-col">
             <div className="flex items-center">
-              <span className="font-semibold">{nickname}</span>
+              <span className="font-semibold text-black dark:text-white">{nickname}</span>
               {Math.random() > 0.5 && (
                 <span className="ml-1">
                   <Sparkles className="w-3 h-3 text-primary" />
                 </span>
               )}
             </div>
-            <span className="text-xs text-muted-foreground">{timestamp}</span>
+            <span className="text-xs text-gray-600 dark:text-muted-foreground">{timestamp}</span>
           </div>
         </div>
         <Button variant="ghost" size="icon" className="rounded-full">
@@ -100,7 +100,7 @@ const Post: React.FC<PostProps> = ({
       </CardHeader>
       
       <CardContent className="p-4 pt-2">
-        <p className="text-sm mb-3">{content}</p>
+        <p className="text-sm mb-3 text-black dark:text-white">{content}</p>
         {image && (
           <div className="rounded-xl overflow-hidden mb-2">
             <img 
@@ -122,7 +122,7 @@ const Post: React.FC<PostProps> = ({
             <Button 
               variant="ghost" 
               size="sm" 
-              className={`rounded-full flex items-center ${liked ? 'text-red-500' : ''}`}
+              className={`rounded-full flex items-center ${liked ? 'text-red-500' : 'text-gray-700 dark:text-gray-300'}`}
               onClick={handleLike}
             >
               <Heart className={`h-5 w-5 ${liked ? 'fill-red-500' : ''}`} />
@@ -131,14 +131,14 @@ const Post: React.FC<PostProps> = ({
             <Button 
               variant="ghost" 
               size="sm" 
-              className="rounded-full flex items-center"
+              className="rounded-full flex items-center text-gray-700 dark:text-gray-300"
               onClick={() => setShowComments(!showComments)}
             >
               <MessageCircle className="h-5 w-5" />
               <span className="ml-1">{comments.length}</span>
             </Button>
           </div>
-          <Button variant="ghost" size="sm" className="rounded-full">
+          <Button variant="ghost" size="sm" className="rounded-full text-gray-700 dark:text-gray-300">
             <Share2 className="h-5 w-5" />
           </Button>
         </div>
@@ -151,7 +151,7 @@ const Post: React.FC<PostProps> = ({
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 placeholder="Add a comment..."
-                className="flex-1 bg-muted rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                className="flex-1 bg-muted rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary text-gray-800 dark:text-white"
               />
               <Button 
                 type="submit" 
@@ -179,10 +179,10 @@ const Post: React.FC<PostProps> = ({
                   </div>
                   <div className="flex-1">
                     <div className="bg-muted rounded-2xl px-3 py-2">
-                      <div className="font-medium text-xs">{comment.nickname}</div>
-                      <p className="text-sm">{comment.content}</p>
+                      <div className="font-medium text-xs text-gray-800 dark:text-white">{comment.nickname}</div>
+                      <p className="text-sm text-gray-800 dark:text-white">{comment.content}</p>
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">{comment.timestamp}</div>
+                    <div className="text-xs text-gray-500 dark:text-muted-foreground mt-1">{comment.timestamp}</div>
                   </div>
                 </div>
               ))}
