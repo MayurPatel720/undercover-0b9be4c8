@@ -5,6 +5,8 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAuth } from '@/contexts/AuthContext';
+import AuthModal from './auth/AuthModal';
 
 export interface Comment {
   id: string;
@@ -40,8 +42,15 @@ const Post: React.FC<PostProps> = ({
   const [comments, setComments] = useState(initialComments);
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const { user } = useAuth();
 
   const handleLike = () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+    
     if (liked) {
       setLikes(prev => prev - 1);
     } else {
@@ -52,11 +61,17 @@ const Post: React.FC<PostProps> = ({
 
   const handleAddComment = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+    
     if (newComment.trim()) {
       const comment: Comment = {
         id: `new-${Date.now()}`,
-        avatar: 'https://source.unsplash.com/random/100x100/?face,me',
-        nickname: 'You',
+        avatar: user ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}` : 'https://source.unsplash.com/random/100x100/?face,me',
+        nickname: user ? (user.user_metadata?.username || 'Anonymous') : 'You',
         content: newComment,
         timestamp: 'Just now'
       };
@@ -100,7 +115,7 @@ const Post: React.FC<PostProps> = ({
       </CardHeader>
       
       <CardContent className="p-4 pt-2">
-        <p className="text-sm mb-3 text-black dark:text-white">{content}</p>
+        {content && <p className="text-sm mb-3 text-black dark:text-white">{content}</p>}
         {image && (
           <div className="rounded-xl overflow-hidden mb-2">
             <img 
@@ -190,6 +205,8 @@ const Post: React.FC<PostProps> = ({
           </div>
         )}
       </CardFooter>
+      
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </Card>
   );
 };
