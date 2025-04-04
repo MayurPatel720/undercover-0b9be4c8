@@ -1,12 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Share2, MoreHorizontal, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Avatar } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthModal from './auth/AuthModal';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/components/ui/use-toast';
 
 export interface Comment {
   id: string;
@@ -25,6 +26,9 @@ interface PostProps {
   timestamp: string;
   initialLikes: number;
   initialComments: Comment[];
+  realData?: boolean;
+  userId?: string;
+  onInteractionUpdated?: () => void;
 }
 
 const Post: React.FC<PostProps> = ({
@@ -35,7 +39,10 @@ const Post: React.FC<PostProps> = ({
   image,
   timestamp,
   initialLikes,
-  initialComments
+  initialComments,
+  realData = false,
+  userId,
+  onInteractionUpdated
 }) => {
   const [likes, setLikes] = useState(initialLikes);
   const [liked, setLiked] = useState(false);
@@ -43,23 +50,119 @@ const Post: React.FC<PostProps> = ({
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
 
-  const handleLike = () => {
+  // Check if the current user has liked this post
+  useEffect(() => {
+    if (realData && user) {
+      const checkLikeStatus = async () => {
+        const { data, error } = await supabase
+          .from('likes')
+          .select('*')
+          .eq('post_id', id)
+          .eq('user_id', user.id)
+          .single();
+        
+        if (data && !error) {
+          setLiked(true);
+        }
+      };
+      
+      checkLikeStatus();
+    }
+  }, [id, user, realData]);
+
+  // Fetch comments for this post
+  useEffect(() => {
+    if (realData && showComments) {
+      const fetchComments = async () => {
+        const { data, error } = await supabase
+          .from('comments_with_profiles')
+          .select('*')
+          .eq('post_id', id)
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          console.error('Error fetching comments:', error);
+          return;
+        }
+        
+        if (data) {
+          const formattedComments: Comment[] = data.map(comment => ({
+            id: comment.id,
+            avatar: comment.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.username}`,
+            nickname: comment.username || 'Anonymous',
+            content: comment.content || '',
+            timestamp: formatTimeAgo(comment.created_at)
+          }));
+          
+          setComments(formattedComments);
+        }
+      };
+      
+      fetchComments();
+    }
+  }, [id, showComments, realData]);
+
+  const handleLike = async () => {
     if (!user) {
       setShowAuthModal(true);
       return;
     }
     
-    if (liked) {
-      setLikes(prev => prev - 1);
+    if (realData) {
+      try {
+        if (liked) {
+          // Unlike the post
+          const { error } = await supabase
+            .from('likes')
+            .delete()
+            .eq('post_id', id)
+            .eq('user_id', user.id);
+          
+          if (error) throw error;
+          
+          setLikes(prev => Math.max(0, prev - 1));
+          setLiked(false);
+        } else {
+          // Like the post
+          const { error } = await supabase
+            .from('likes')
+            .insert({
+              post_id: id,
+              user_id: user.id
+            });
+            
+          if (error) throw error;
+          
+          setLikes(prev => prev + 1);
+          setLiked(true);
+        }
+        
+        if (onInteractionUpdated) {
+          onInteractionUpdated();
+        }
+      } catch (error: any) {
+        console.error('Error updating like:', error);
+        toast({
+          title: 'Error',
+          description: error.message,
+          variant: 'destructive'
+        });
+      }
     } else {
-      setLikes(prev => prev + 1);
+      // Use the original behavior for non-real data
+      if (liked) {
+        setLikes(prev => prev - 1);
+      } else {
+        setLikes(prev => prev + 1);
+      }
+      setLiked(!liked);
     }
-    setLiked(!liked);
   };
 
-  const handleAddComment = (e: React.FormEvent) => {
+  const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!user) {
@@ -67,7 +170,49 @@ const Post: React.FC<PostProps> = ({
       return;
     }
     
-    if (newComment.trim()) {
+    if (!newComment.trim()) return;
+    
+    if (realData) {
+      setIsSubmitting(true);
+      try {
+        const { data, error } = await supabase
+          .from('comments')
+          .insert({
+            post_id: id,
+            user_id: user.id,
+            content: newComment.trim()
+          })
+          .select('*, profiles:user_id(username, avatar_url)')
+          .single();
+        
+        if (error) throw error;
+        
+        const newCommentObj: Comment = {
+          id: data.id,
+          avatar: data.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.profiles?.username}`,
+          nickname: data.profiles?.username || 'Anonymous',
+          content: data.content,
+          timestamp: 'Just now'
+        };
+        
+        setComments(prev => [newCommentObj, ...prev]);
+        setNewComment('');
+        
+        if (onInteractionUpdated) {
+          onInteractionUpdated();
+        }
+      } catch (error: any) {
+        console.error('Error adding comment:', error);
+        toast({
+          title: 'Error',
+          description: error.message,
+          variant: 'destructive'
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
+      // Use the original behavior for non-real data
       const comment: Comment = {
         id: `new-${Date.now()}`,
         avatar: user ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}` : 'https://source.unsplash.com/random/100x100/?face,me',
@@ -78,6 +223,61 @@ const Post: React.FC<PostProps> = ({
       setComments(prev => [comment, ...prev]);
       setNewComment('');
     }
+  };
+
+  const handleShare = async () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+    
+    if (realData) {
+      try {
+        const { error } = await supabase
+          .from('shares')
+          .insert({
+            post_id: id,
+            user_id: user.id
+          });
+          
+        if (error) throw error;
+        
+        toast({
+          title: 'Post shared',
+          description: 'This post has been shared to your profile.'
+        });
+        
+        if (onInteractionUpdated) {
+          onInteractionUpdated();
+        }
+      } catch (error: any) {
+        console.error('Error sharing post:', error);
+        toast({
+          title: 'Error',
+          description: error.message,
+          variant: 'destructive'
+        });
+      }
+    } else {
+      toast({
+        title: 'Post shared',
+        description: 'This post has been shared to your profile.'
+      });
+    }
+  };
+
+  // Format time ago helper
+  const formatTimeAgo = (dateString: string) => {
+    const now = new Date();
+    const past = new Date(dateString);
+    const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`;
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+    
+    return new Date(dateString).toLocaleDateString();
   };
 
   return (
@@ -153,7 +353,12 @@ const Post: React.FC<PostProps> = ({
               <span className="ml-1">{comments.length}</span>
             </Button>
           </div>
-          <Button variant="ghost" size="sm" className="rounded-full text-gray-700 dark:text-gray-300">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="rounded-full text-gray-700 dark:text-gray-300"
+            onClick={handleShare}
+          >
             <Share2 className="h-5 w-5" />
           </Button>
         </div>
@@ -172,35 +377,41 @@ const Post: React.FC<PostProps> = ({
                 type="submit" 
                 variant="ghost" 
                 className="rounded-full ml-2 bg-primary/10 text-primary hover:bg-primary/20"
-                disabled={!newComment.trim()}
+                disabled={!newComment.trim() || isSubmitting}
               >
-                Post
+                {isSubmitting ? 'Posting...' : 'Post'}
               </Button>
             </form>
             
             <ScrollArea className="max-h-60 overflow-y-auto">
-              {comments.map(comment => (
-                <div key={comment.id} className="flex items-start space-x-2 mb-3">
-                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                    <img 
-                      src={comment.avatar} 
-                      alt={comment.nickname} 
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = 'https://source.unsplash.com/random/100x100/?face';
-                      }}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <div className="bg-muted rounded-2xl px-3 py-2">
-                      <div className="font-medium text-xs text-gray-800 dark:text-white">{comment.nickname}</div>
-                      <p className="text-sm text-gray-800 dark:text-white">{comment.content}</p>
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-muted-foreground mt-1">{comment.timestamp}</div>
-                  </div>
+              {comments.length === 0 ? (
+                <div className="text-center py-4 text-gray-500">
+                  No comments yet. Be the first to comment!
                 </div>
-              ))}
+              ) : (
+                comments.map(comment => (
+                  <div key={comment.id} className="flex items-start space-x-2 mb-3">
+                    <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                      <img 
+                        src={comment.avatar} 
+                        alt={comment.nickname} 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = 'https://source.unsplash.com/random/100x100/?face';
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="bg-muted rounded-2xl px-3 py-2">
+                        <div className="font-medium text-xs text-gray-800 dark:text-white">{comment.nickname}</div>
+                        <p className="text-sm text-gray-800 dark:text-white">{comment.content}</p>
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-muted-foreground mt-1">{comment.timestamp}</div>
+                    </div>
+                  </div>
+                ))
+              )}
             </ScrollArea>
           </div>
         )}

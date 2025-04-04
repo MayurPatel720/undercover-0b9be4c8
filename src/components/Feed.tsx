@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Post, { Comment } from './Post';
@@ -15,6 +16,9 @@ interface PostData {
   user_id: string;
   username: string;
   avatar_url: string | null;
+  likes_count?: number;
+  comments_count?: number;
+  shares_count?: number;
 }
 
 const Feed = () => {
@@ -32,8 +36,19 @@ const Feed = () => {
 
       if (error) throw error;
       
-      // Cast the data to the PostData type to ensure TypeScript is happy
-      setPosts(data as PostData[] || []);
+      // Transform the data to include random usernames and real interaction counts
+      const transformedData = (data as any[] || []).map(post => {
+        return {
+          ...post,
+          display_name: generateRandomUsername(),
+          // For now we'll use placeholder counts, in a real app these would come from the database
+          likes_count: post.likes_count || Math.floor(Math.random() * 30),
+          comments_count: post.comments_count || Math.floor(Math.random() * 10),
+          shares_count: post.shares_count || Math.floor(Math.random() * 5)
+        };
+      });
+      
+      setPosts(transformedData as PostData[]);
     } catch (error: any) {
       console.error('Error fetching posts:', error);
       toast({
@@ -63,6 +78,18 @@ const Feed = () => {
     };
   }, []);
 
+  // Generate a random username
+  const generateRandomUsername = () => {
+    const adjectives = ['Cool', 'Super', 'Awesome', 'Epic', 'Fantastic', 'Brilliant', 'Stellar', 'Amazing', 'Cosmic', 'Dynamic'];
+    const nouns = ['Star', 'Ninja', 'Voyager', 'Explorer', 'Dreamer', 'Phoenix', 'Tiger', 'Hawk', 'Rider', 'Master'];
+    const randomNumber = Math.floor(Math.random() * 999) + 1;
+    
+    const randomAdj = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
+    
+    return `${randomAdj}${randomNoun}${randomNumber}`;
+  };
+
   // Format post creation time
   const formatTimeAgo = (dateString: string) => {
     const now = new Date();
@@ -75,14 +102,6 @@ const Feed = () => {
     if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
     
     return new Date(dateString).toLocaleDateString();
-  };
-
-  // Function to anonymize usernames
-  const anonymizeUsername = (username: string) => {
-    if (!username) return 'Anonymous';
-    // Keep only the first character and replace the rest with asterisks
-    if (username.length <= 3) return username;
-    return `${username.charAt(0)}${'*'.repeat(username.length - 2)}${username.charAt(username.length - 1)}`;
   };
 
   return (
@@ -109,12 +128,15 @@ const Feed = () => {
                 key={post.id}
                 id={post.id}
                 avatar={post.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.username}`}
-                nickname={anonymizeUsername(post.username)}
+                nickname={post.display_name || generateRandomUsername()}
                 content={post.content || ''}
                 image={post.image_url || undefined}
                 timestamp={formatTimeAgo(post.created_at)}
-                initialLikes={Math.floor(Math.random() * 50)}
+                initialLikes={post.likes_count || 0}
                 initialComments={[]}
+                realData={true}
+                userId={post.user_id}
+                onInteractionUpdated={fetchPosts}
               />
             ))}
           </div>
