@@ -14,10 +14,8 @@ interface PostData {
   image_url: string | null;
   created_at: string;
   user_id: string;
-  profiles: {
-    username: string;
-    avatar_url: string | null;
-  };
+  username: string;
+  avatar_url: string | null;
 }
 
 const Feed = () => {
@@ -29,18 +27,8 @@ const Feed = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('posts')
-        .select(`
-          id,
-          content,
-          image_url,
-          created_at,
-          user_id,
-          profiles (
-            username,
-            avatar_url
-          )
-        `)
+        .from('posts_with_profiles')
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -111,8 +99,8 @@ const Feed = () => {
             <Post
               key={post.id}
               id={post.id}
-              avatar={post.profiles.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.profiles.username}`}
-              nickname={post.profiles.username}
+              avatar={post.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.username}`}
+              nickname={post.username}
               content={post.content || ''}
               image={post.image_url || undefined}
               timestamp={formatTimeAgo(post.created_at)}

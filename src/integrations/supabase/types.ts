@@ -56,7 +56,18 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      posts_with_profiles: {
+        Row: {
+          avatar_url: string | null
+          content: string | null
+          created_at: string | null
+          id: string | null
+          image_url: string | null
+          user_id: string | null
+          username: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
