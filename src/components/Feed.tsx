@@ -36,19 +36,7 @@ const Feed = () => {
 
       if (error) throw error;
       
-      // Transform the data to include random usernames and real interaction counts
-      const transformedData = (data as any[] || []).map(post => {
-        return {
-          ...post,
-          display_name: generateRandomUsername(),
-          // For now we'll use placeholder counts, in a real app these would come from the database
-          likes_count: post.likes_count || Math.floor(Math.random() * 30),
-          comments_count: post.comments_count || Math.floor(Math.random() * 10),
-          shares_count: post.shares_count || Math.floor(Math.random() * 5)
-        };
-      });
-      
-      setPosts(transformedData as PostData[]);
+      setPosts(data as PostData[]);
     } catch (error: any) {
       console.error('Error fetching posts:', error);
       toast({
@@ -77,18 +65,6 @@ const Feed = () => {
       subscription.unsubscribe();
     };
   }, []);
-
-  // Generate a random username
-  const generateRandomUsername = () => {
-    const adjectives = ['Cool', 'Super', 'Awesome', 'Epic', 'Fantastic', 'Brilliant', 'Stellar', 'Amazing', 'Cosmic', 'Dynamic'];
-    const nouns = ['Star', 'Ninja', 'Voyager', 'Explorer', 'Dreamer', 'Phoenix', 'Tiger', 'Hawk', 'Rider', 'Master'];
-    const randomNumber = Math.floor(Math.random() * 999) + 1;
-    
-    const randomAdj = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
-    
-    return `${randomAdj}${randomNoun}${randomNumber}`;
-  };
 
   // Format post creation time
   const formatTimeAgo = (dateString: string) => {
@@ -128,7 +104,7 @@ const Feed = () => {
                 key={post.id}
                 id={post.id}
                 avatar={post.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.username}`}
-                nickname={post.display_name || generateRandomUsername()}
+                nickname={post.username}
                 content={post.content || ''}
                 image={post.image_url || undefined}
                 timestamp={formatTimeAgo(post.created_at)}

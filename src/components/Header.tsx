@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Search, Bell, User, Sparkles, LogOut, LogIn, Menu, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Search, Bell, User, Sparkles, LogOut, LogIn, Menu } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from '@/contexts/AuthContext';
 import AuthModal from './auth/AuthModal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -19,6 +19,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 const Header = () => {
   const { user, signOut } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const navigate = useNavigate();
   
   const handleOpenAuthModal = () => setShowAuthModal(true);
   const handleCloseAuthModal = () => setShowAuthModal(false);
@@ -50,7 +51,10 @@ const Header = () => {
           <DropdownMenuContent align="end" className="glass border-white/10">
             <DropdownMenuLabel className="text-white">My Account</DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-white/10" />
-            <DropdownMenuItem className="text-white hover:bg-white/10">
+            <DropdownMenuItem 
+              className="text-white hover:bg-white/10"
+              onClick={() => navigate('/profile')}
+            >
               <User className="mr-2 h-4 w-4" />
               Profile
             </DropdownMenuItem>
@@ -132,10 +136,19 @@ const Header = () => {
                     <Sparkles className="mr-2 h-5 w-5" />
                     Discover
                   </Button>
-                  <Button variant="ghost" className="justify-start rounded-full">
-                    <User className="mr-2 h-5 w-5" />
-                    Profile
-                  </Button>
+                  
+                  {user && (
+                    <Button 
+                      variant="ghost" 
+                      className="justify-start rounded-full"
+                      onClick={() => {
+                        navigate('/profile');
+                      }}
+                    >
+                      <User className="mr-2 h-5 w-5" />
+                      Profile
+                    </Button>
+                  )}
                   
                   {user ? (
                     <Button 

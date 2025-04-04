@@ -151,15 +151,15 @@ const CreatePost = ({ onPostCreated }: { onPostCreated?: () => void }) => {
           )}
           
           <div className="flex justify-between items-center">
-            <div className="flex space-x-2">
+            <div className="flex space-x-1 sm:space-x-2">
               <Button 
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="text-gray-600 dark:text-gray-300 flex items-center"
+                className="text-gray-600 dark:text-gray-300 flex items-center p-1 sm:p-2"
                 onClick={() => document.getElementById('image-upload')?.click()}
               >
-                <Image className="h-5 w-5 mr-1" />
+                <Image className="h-5 w-5 sm:mr-1" />
                 <span className="hidden sm:inline">Image</span>
                 <input
                   id="image-upload"
@@ -174,9 +174,9 @@ const CreatePost = ({ onPostCreated }: { onPostCreated?: () => void }) => {
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="text-gray-600 dark:text-gray-300 flex items-center"
+                className="text-gray-600 dark:text-gray-300 flex items-center p-1 sm:p-2"
               >
-                <Camera className="h-5 w-5 mr-1" />
+                <Camera className="h-5 w-5 sm:mr-1" />
                 <span className="hidden sm:inline">Photo</span>
               </Button>
             </div>
@@ -184,9 +184,9 @@ const CreatePost = ({ onPostCreated }: { onPostCreated?: () => void }) => {
             <Button 
               type="submit"
               disabled={isSubmitting || (!content.trim() && !imageFile)}
-              className="gradient-primary font-medium rounded-full"
+              className="gradient-primary font-medium rounded-full px-3 sm:px-4"
             >
-              Post{isSubmitting && 'ing...'}
+              {isSubmitting ? 'Posting...' : 'Post'}
             </Button>
           </div>
         </form>
