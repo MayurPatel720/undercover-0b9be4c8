@@ -29,7 +29,7 @@ export interface PostWithProfile extends Post {
 }
 
 export interface CommentWithProfile {
-  id: string;
+  id: string | null;
   post_id: string | null;
   content: string | null;
   created_at: string | null;

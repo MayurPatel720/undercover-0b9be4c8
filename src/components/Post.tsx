@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Share2, MoreHorizontal, Sparkles } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, Sparkles, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -8,6 +9,12 @@ import AuthModal from './auth/AuthModal';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { CommentWithProfile } from '@/lib/database.types';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export interface Comment {
   id: string;
@@ -57,15 +64,19 @@ const Post: React.FC<PostProps> = ({
   useEffect(() => {
     if (realData && user) {
       const checkLikeStatus = async () => {
-        const { data, error } = await supabase
-          .from('likes')
-          .select('*')
-          .eq('post_id', id)
-          .eq('user_id', user.id)
-          .limit(1);
-        
-        if (data && data.length > 0 && !error) {
-          setLiked(true);
+        try {
+          const { data, error } = await supabase
+            .from('likes')
+            .select('*')
+            .eq('post_id', id)
+            .eq('user_id', user.id)
+            .limit(1);
+          
+          if (!error && data && data.length > 0) {
+            setLiked(true);
+          }
+        } catch (err) {
+          console.error('Error checking like status:', err);
         }
       };
       
@@ -77,27 +88,31 @@ const Post: React.FC<PostProps> = ({
   useEffect(() => {
     if (realData && showComments) {
       const fetchComments = async () => {
-        const { data, error } = await supabase
-          .from('comments_with_profiles')
-          .select('*')
-          .eq('post_id', id)
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          console.error('Error fetching comments:', error);
-          return;
-        }
-        
-        if (data) {
-          const formattedComments: Comment[] = data.map((comment: CommentWithProfile) => ({
-            id: comment.id || '',
-            avatar: comment.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.username}`,
-            nickname: comment.username || 'Anonymous',
-            content: comment.content || '',
-            timestamp: formatTimeAgo(comment.created_at || '')
-          }));
+        try {
+          const { data, error } = await supabase
+            .from('comments_with_profiles')
+            .select('*')
+            .eq('post_id', id)
+            .order('created_at', { ascending: false });
           
-          setComments(formattedComments);
+          if (error) {
+            console.error('Error fetching comments:', error);
+            return;
+          }
+          
+          if (data) {
+            const formattedComments: Comment[] = data.map((comment: CommentWithProfile) => ({
+              id: comment.id || '',
+              avatar: comment.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.username || 'anonymous'}`,
+              nickname: comment.username || 'Anonymous',
+              content: comment.content || '',
+              timestamp: formatTimeAgo(comment.created_at || '')
+            }));
+            
+            setComments(formattedComments);
+          }
+        } catch (err) {
+          console.error('Error in comment fetch:', err);
         }
       };
       
@@ -179,27 +194,36 @@ const Post: React.FC<PostProps> = ({
             user_id: user.id,
             content: newComment.trim()
           })
-          .select()
-          .single();
+          .select();
         
         if (error) throw error;
         
-        const { data: profileData } = await supabase
+        // Get commenter profile information
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('username, avatar_url')
           .eq('id', user.id)
           .single();
         
+        if (profileError) throw profileError;
+        
+        // Add the new comment to the list
+        const commentItem = data[0];
         const newCommentObj: Comment = {
-          id: data.id,
-          avatar: profileData?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileData?.username}`,
-          nickname: profileData?.username || 'Anonymous',
-          content: data.content,
+          id: commentItem.id,
+          avatar: profileData?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileData?.username || user.email}`,
+          nickname: profileData?.username || user.email?.split('@')[0] || 'Anonymous',
+          content: commentItem.content,
           timestamp: 'Just now'
         };
         
         setComments(prev => [newCommentObj, ...prev]);
         setNewComment('');
+        
+        // Make sure comments are shown after posting
+        if (!showComments) {
+          setShowComments(true);
+        }
         
         if (onInteractionUpdated) {
           onInteractionUpdated();
@@ -218,21 +242,62 @@ const Post: React.FC<PostProps> = ({
       const comment: Comment = {
         id: `new-${Date.now()}`,
         avatar: user ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}` : 'https://source.unsplash.com/random/100x100/?face,me',
-        nickname: user ? (user.user_metadata?.username || 'Anonymous') : 'You',
+        nickname: user ? (user.user_metadata?.username || user.email?.split('@')[0] || 'Anonymous') : 'You',
         content: newComment,
         timestamp: 'Just now'
       };
       setComments(prev => [comment, ...prev]);
       setNewComment('');
+      
+      // Make sure comments are shown after posting
+      if (!showComments) {
+        setShowComments(true);
+      }
     }
   };
 
-  const handleShare = async () => {
-    if (!user) {
+  const handleShare = async (platform?: string) => {
+    if (!user && realData) {
       setShowAuthModal(true);
       return;
     }
     
+    // Share to external platforms
+    if (platform) {
+      let shareUrl = '';
+      const postUrl = `${window.location.origin}/post/${id}`;
+      const text = `Check out this post by ${nickname}`;
+      
+      switch (platform) {
+        case 'whatsapp':
+          shareUrl = `https://wa.me/?text=${encodeURIComponent(text + ': ' + postUrl)}`;
+          break;
+        case 'twitter':
+          shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(postUrl)}`;
+          break;
+        case 'facebook':
+          shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`;
+          break;
+        case 'linkedin':
+          shareUrl = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(postUrl)}&title=${encodeURIComponent(text)}`;
+          break;
+        case 'telegram':
+          shareUrl = `https://t.me/share/url?url=${encodeURIComponent(postUrl)}&text=${encodeURIComponent(text)}`;
+          break;
+      }
+      
+      if (shareUrl) {
+        window.open(shareUrl, '_blank', 'noopener,noreferrer');
+      }
+      
+      toast({
+        title: 'Shared!',
+        description: `Post shared to ${platform}`,
+      });
+      return;
+    }
+    
+    // Internal app sharing
     if (realData) {
       try {
         const { error } = await supabase
@@ -354,14 +419,38 @@ const Post: React.FC<PostProps> = ({
               <span className="ml-1">{comments.length}</span>
             </Button>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="rounded-full text-gray-700 dark:text-gray-300"
-            onClick={handleShare}
-          >
-            <Share2 className="h-5 w-5" />
-          </Button>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="rounded-full text-gray-700 dark:text-gray-300"
+              >
+                <Share2 className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => handleShare()}>
+                Share to profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleShare('whatsapp')}>
+                Share to WhatsApp
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleShare('twitter')}>
+                Share to Twitter
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleShare('facebook')}>
+                Share to Facebook
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleShare('telegram')}>
+                Share to Telegram
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleShare('linkedin')}>
+                Share to LinkedIn
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         
         {showComments && (

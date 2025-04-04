@@ -101,7 +101,7 @@ const ProfilePage = () => {
           ) : (
             <div className="max-w-lg mx-auto py-6 px-4">
               {/* Profile Header */}
-              <div className="bg-white dark:bg-card rounded-2xl shadow-md p-6 mb-6">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6 mb-6">
                 <div className="flex flex-col items-center mb-4">
                   <div className="w-24 h-24 rounded-full p-1 gradient-primary mb-4">
                     <div className="w-full h-full bg-white rounded-full overflow-hidden">
@@ -112,57 +112,57 @@ const ProfilePage = () => {
                       />
                     </div>
                   </div>
-                  <h1 className="text-xl font-bold mb-1">{user.user_metadata?.username || user.email?.split('@')[0]}</h1>
-                  <p className="text-muted-foreground text-sm">@{user.user_metadata?.username || user.email?.split('@')[0]}</p>
+                  <h1 className="text-xl font-bold mb-1 text-gray-900 dark:text-white">{user.user_metadata?.username || user.email?.split('@')[0]}</h1>
+                  <p className="text-gray-500 dark:text-gray-300 text-sm">@{user.user_metadata?.username || user.email?.split('@')[0]}</p>
                   
                   <div className="flex justify-center space-x-6 mt-4">
                     <div className="flex flex-col items-center">
-                      <span className="font-bold text-lg">{stats.posts_count}</span>
-                      <span className="text-xs text-muted-foreground">Posts</span>
+                      <span className="font-bold text-lg text-gray-900 dark:text-white">{stats.posts_count}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Posts</span>
                     </div>
                     <div className="flex flex-col items-center">
-                      <span className="font-bold text-lg">{stats.likes_count}</span>
-                      <span className="text-xs text-muted-foreground">Likes</span>
+                      <span className="font-bold text-lg text-gray-900 dark:text-white">{stats.likes_count}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Likes</span>
                     </div>
                     <div className="flex flex-col items-center">
-                      <span className="font-bold text-lg">{stats.comments_count}</span>
-                      <span className="text-xs text-muted-foreground">Comments</span>
+                      <span className="font-bold text-lg text-gray-900 dark:text-white">{stats.comments_count}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Comments</span>
                     </div>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-4 gap-3 mt-6">
-                  <div className="flex flex-col items-center justify-center p-3 bg-muted rounded-lg">
+                  <div className="flex flex-col items-center justify-center p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
                     <User className="h-5 w-5 mb-1 text-primary" />
-                    <span className="text-xs text-center">Profile</span>
+                    <span className="text-xs text-center text-gray-700 dark:text-gray-300">Profile</span>
                   </div>
-                  <div className="flex flex-col items-center justify-center p-3 bg-muted rounded-lg">
+                  <div className="flex flex-col items-center justify-center p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
                     <Image className="h-5 w-5 mb-1 text-primary" />
-                    <span className="text-xs text-center">Media</span>
+                    <span className="text-xs text-center text-gray-700 dark:text-gray-300">Media</span>
                   </div>
-                  <div className="flex flex-col items-center justify-center p-3 bg-muted rounded-lg">
+                  <div className="flex flex-col items-center justify-center p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
                     <Heart className="h-5 w-5 mb-1 text-primary" />
-                    <span className="text-xs text-center">Likes</span>
+                    <span className="text-xs text-center text-gray-700 dark:text-gray-300">Likes</span>
                   </div>
-                  <div className="flex flex-col items-center justify-center p-3 bg-muted rounded-lg">
+                  <div className="flex flex-col items-center justify-center p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
                     <Settings className="h-5 w-5 mb-1 text-primary" />
-                    <span className="text-xs text-center">Settings</span>
+                    <span className="text-xs text-center text-gray-700 dark:text-gray-300">Settings</span>
                   </div>
                 </div>
               </div>
               
               {/* User Posts */}
-              <h2 className="text-xl font-bold mb-4">Your Posts</h2>
+              <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Your Posts</h2>
               
               {loading ? (
                 <div className="flex justify-center py-8">
                   <div className="animate-pulse w-12 h-12 rounded-full gradient-primary"></div>
                 </div>
               ) : userPosts.length === 0 ? (
-                <div className="text-center py-8 bg-white dark:bg-card rounded-2xl shadow-md p-6">
-                  <MessageCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-lg">No posts yet</p>
-                  <p className="mt-2 text-muted-foreground">Share your first post on the home page!</p>
+                <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
+                  <MessageCircle className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
+                  <p className="text-lg text-gray-800 dark:text-white">No posts yet</p>
+                  <p className="mt-2 text-gray-500 dark:text-gray-400">Share your first post on the home page!</p>
                 </div>
               ) : (
                 <div className="space-y-4">
