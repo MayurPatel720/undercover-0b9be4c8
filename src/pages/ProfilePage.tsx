@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Post from '@/components/Post';
@@ -12,7 +13,7 @@ import AuthModal from '@/components/auth/AuthModal';
 import { Post as PostType, ProfileStats } from '@/lib/database.types';
 
 const ProfilePage = () => {
-  const [userPosts, setUserPosts] = useState<any[]>([]);
+  const [userPosts, setUserPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<ProfileStats>({
     posts_count: 0,

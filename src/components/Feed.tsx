@@ -10,7 +10,7 @@ import { toast } from '@/components/ui/use-toast';
 import { Post as PostType } from '@/lib/database.types';
 
 const Feed = () => {
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
