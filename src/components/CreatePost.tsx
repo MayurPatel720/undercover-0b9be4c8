@@ -105,7 +105,7 @@ const CreatePost = ({ onPostCreated }: { onPostCreated?: () => void }) => {
 
   return (
     <>
-      <div className="bg-white dark:bg-card rounded-2xl shadow-md p-4 mb-4">
+      <div className="bg-white dark:bg-card rounded-2xl shadow-md p-4 mb-4 w-full">
         <form onSubmit={handleSubmit}>
           <div className="flex items-center mb-3">
             <div className="w-10 h-10 rounded-full p-0.5 gradient-primary">

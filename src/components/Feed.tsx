@@ -7,22 +7,10 @@ import CreatePost from './CreatePost';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/use-toast';
-
-interface PostData {
-  id: string;
-  content: string | null;
-  image_url: string | null;
-  created_at: string;
-  user_id: string;
-  username: string;
-  avatar_url: string | null;
-  likes_count?: number;
-  comments_count?: number;
-  shares_count?: number;
-}
+import { Post as PostType } from '@/lib/database.types';
 
 const Feed = () => {
-  const [posts, setPosts] = useState<PostData[]>([]);
+  const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
@@ -36,7 +24,7 @@ const Feed = () => {
 
       if (error) throw error;
       
-      setPosts(data as PostData[]);
+      setPosts(data || []);
     } catch (error: any) {
       console.error('Error fetching posts:', error);
       toast({
@@ -85,7 +73,7 @@ const Feed = () => {
       <div className="w-full border-b border-border bg-white/5 backdrop-blur-sm">
         <StoriesRow />
       </div>
-      <div className="max-w-lg mx-auto py-3 px-4">
+      <div className="max-w-lg w-full mx-auto py-3 px-4 sm:px-4">
         <CreatePost onPostCreated={fetchPosts} />
         
         {loading ? (

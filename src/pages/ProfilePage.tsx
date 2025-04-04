@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Post from '@/components/Post';
@@ -10,28 +9,10 @@ import { toast } from '@/components/ui/use-toast';
 import { User, Settings, Image, MessageCircle, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AuthModal from '@/components/auth/AuthModal';
-
-interface PostData {
-  id: string;
-  content: string | null;
-  image_url: string | null;
-  created_at: string;
-  user_id: string;
-  username: string;
-  avatar_url: string | null;
-  likes_count: number;
-  comments_count: number;
-  shares_count: number;
-}
-
-interface ProfileStats {
-  posts_count: number;
-  likes_count: number;
-  comments_count: number;
-}
+import { Post as PostType, ProfileStats } from '@/lib/database.types';
 
 const ProfilePage = () => {
-  const [userPosts, setUserPosts] = useState<PostData[]>([]);
+  const [userPosts, setUserPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<ProfileStats>({
     posts_count: 0,
@@ -59,7 +40,7 @@ const ProfilePage = () => {
 
         if (error) throw error;
         
-        setUserPosts(data as PostData[]);
+        setUserPosts(data || []);
         
         // Calculate stats
         if (data) {
@@ -193,7 +174,7 @@ const ProfilePage = () => {
                       content={post.content || ''}
                       image={post.image_url || undefined}
                       timestamp={formatTimeAgo(post.created_at)}
-                      initialLikes={post.likes_count}
+                      initialLikes={post.likes_count || 0}
                       initialComments={[]}
                       realData={true}
                       userId={post.user_id}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Share2, MoreHorizontal, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -8,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import AuthModal from './auth/AuthModal';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
+import { CommentWithProfile } from '@/lib/database.types';
 
 export interface Comment {
   id: string;
@@ -62,9 +62,9 @@ const Post: React.FC<PostProps> = ({
           .select('*')
           .eq('post_id', id)
           .eq('user_id', user.id)
-          .single();
+          .limit(1);
         
-        if (data && !error) {
+        if (data && data.length > 0 && !error) {
           setLiked(true);
         }
       };
@@ -89,12 +89,12 @@ const Post: React.FC<PostProps> = ({
         }
         
         if (data) {
-          const formattedComments: Comment[] = data.map(comment => ({
-            id: comment.id,
+          const formattedComments: Comment[] = data.map((comment: CommentWithProfile) => ({
+            id: comment.id || '',
             avatar: comment.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.username}`,
             nickname: comment.username || 'Anonymous',
             content: comment.content || '',
-            timestamp: formatTimeAgo(comment.created_at)
+            timestamp: formatTimeAgo(comment.created_at || '')
           }));
           
           setComments(formattedComments);
@@ -114,7 +114,6 @@ const Post: React.FC<PostProps> = ({
     if (realData) {
       try {
         if (liked) {
-          // Unlike the post
           const { error } = await supabase
             .from('likes')
             .delete()
@@ -126,7 +125,6 @@ const Post: React.FC<PostProps> = ({
           setLikes(prev => Math.max(0, prev - 1));
           setLiked(false);
         } else {
-          // Like the post
           const { error } = await supabase
             .from('likes')
             .insert({
@@ -152,7 +150,6 @@ const Post: React.FC<PostProps> = ({
         });
       }
     } else {
-      // Use the original behavior for non-real data
       if (liked) {
         setLikes(prev => prev - 1);
       } else {
@@ -182,15 +179,21 @@ const Post: React.FC<PostProps> = ({
             user_id: user.id,
             content: newComment.trim()
           })
-          .select('*, profiles:user_id(username, avatar_url)')
+          .select()
           .single();
         
         if (error) throw error;
         
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('username, avatar_url')
+          .eq('id', user.id)
+          .single();
+        
         const newCommentObj: Comment = {
           id: data.id,
-          avatar: data.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.profiles?.username}`,
-          nickname: data.profiles?.username || 'Anonymous',
+          avatar: profileData?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileData?.username}`,
+          nickname: profileData?.username || 'Anonymous',
           content: data.content,
           timestamp: 'Just now'
         };
@@ -212,7 +215,6 @@ const Post: React.FC<PostProps> = ({
         setIsSubmitting(false);
       }
     } else {
-      // Use the original behavior for non-real data
       const comment: Comment = {
         id: `new-${Date.now()}`,
         avatar: user ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}` : 'https://source.unsplash.com/random/100x100/?face,me',
@@ -266,7 +268,6 @@ const Post: React.FC<PostProps> = ({
     }
   };
 
-  // Format time ago helper
   const formatTimeAgo = (dateString: string) => {
     const now = new Date();
     const past = new Date(dateString);
