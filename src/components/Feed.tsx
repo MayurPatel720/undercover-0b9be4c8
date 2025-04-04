@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Post, { Comment } from './Post';
@@ -78,6 +77,14 @@ const Feed = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
+  // Function to anonymize usernames
+  const anonymizeUsername = (username: string) => {
+    if (!username) return 'Anonymous';
+    // Keep only the first character and replace the rest with asterisks
+    if (username.length <= 3) return username;
+    return `${username.charAt(0)}${'*'.repeat(username.length - 2)}${username.charAt(username.length - 1)}`;
+  };
+
   return (
     <ScrollArea className="h-[calc(100vh-80px)] w-full">
       <div className="w-full border-b border-border bg-white/5 backdrop-blur-sm">
@@ -96,19 +103,21 @@ const Feed = () => {
             <p className="mt-2">Be the first to share something!</p>
           </div>
         ) : (
-          posts.map(post => (
-            <Post
-              key={post.id}
-              id={post.id}
-              avatar={post.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.username}`}
-              nickname={post.username}
-              content={post.content || ''}
-              image={post.image_url || undefined}
-              timestamp={formatTimeAgo(post.created_at)}
-              initialLikes={Math.floor(Math.random() * 50)}
-              initialComments={[]}
-            />
-          ))
+          <div className="space-y-4">
+            {posts.map(post => (
+              <Post
+                key={post.id}
+                id={post.id}
+                avatar={post.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.username}`}
+                nickname={anonymizeUsername(post.username)}
+                content={post.content || ''}
+                image={post.image_url || undefined}
+                timestamp={formatTimeAgo(post.created_at)}
+                initialLikes={Math.floor(Math.random() * 50)}
+                initialComments={[]}
+              />
+            ))}
+          </div>
         )}
       </div>
     </ScrollArea>
