@@ -33,7 +33,8 @@ const Feed = () => {
 
       if (error) throw error;
       
-      setPosts(data || []);
+      // Cast the data to the PostData type to ensure TypeScript is happy
+      setPosts(data as PostData[] || []);
     } catch (error: any) {
       console.error('Error fetching posts:', error);
       toast({
