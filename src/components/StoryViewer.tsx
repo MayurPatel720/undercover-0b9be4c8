@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { StoryWithUser } from '@/lib/database.types';
 import { generateRandomUsername, getAvatarUrl } from '@/utils/nameUtils';
+import { toast } from '@/components/ui/use-toast';
 
 interface StoryViewerProps {
   isOpen: boolean;
@@ -34,21 +35,16 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
       const fetchStories = async () => {
         setLoading(true);
         try {
-          // Try to use RPC function first
-          const { data, error } = await supabase.rpc('get_user_stories', {
-            user_id_param: userId
-          }).then(response => {
-            if (response.error && response.error.message.includes("function \"get_user_stories\" does not exist")) {
-              // Fallback to direct query if RPC doesn't exist
-              return supabase
-                .from('stories')
-                .select('*')
-                .eq('user_id', userId)
-                .gte('expires_at', new Date().toISOString())
-                .order('created_at', { ascending: true });
-            }
-            return response;
-          });
+          // Get current timestamp
+          const now = new Date();
+          
+          // Direct query to get stories
+          const { data, error } = await supabase
+            .from('stories')
+            .select('*')
+            .eq('user_id', userId)
+            .gte('expires_at', now.toISOString())
+            .order('created_at', { ascending: true });
           
           if (error) throw error;
           
@@ -74,8 +70,13 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
           if (data?.length > 0) {
             await markStoryAsViewed(initialStoryId);
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error fetching stories:', error);
+          toast({
+            title: "Failed to load stories",
+            description: error.message || "An error occurred",
+            variant: "destructive"
+          });
         } finally {
           setLoading(false);
         }
@@ -158,7 +159,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
                   index < currentIndex 
                     ? 'bg-white' 
                     : index === currentIndex 
-                    ? 'bg-white animate-progress' 
+                    ? 'bg-white' 
                     : 'bg-white/30'
                 }`}
                 style={{
@@ -209,6 +210,14 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
           >
             <ArrowRight className="h-8 w-8" />
           </Button>
+          
+          {/* Add animation for progress bar */}
+          <style jsx>{`
+            @keyframes progress {
+              0% { width: 0; }
+              100% { width: 100%; }
+            }
+          `}</style>
         </div>
       </DialogContent>
     </Dialog>

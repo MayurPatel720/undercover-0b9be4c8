@@ -29,7 +29,7 @@ const Footer = () => {
           className="w-14 h-14 rounded-full gradient-primary flex items-center justify-center shadow-lg cursor-pointer"
           onClick={() => navigate('/chat')}
         >
-          <MessageCircle className="w-7 h-7 text-accent" />
+          <MessageCircle className="w-7 h-7 text-white" />
         </div>
       </div>
       
