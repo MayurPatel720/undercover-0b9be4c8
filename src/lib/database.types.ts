@@ -38,6 +38,7 @@ export interface CommentWithProfile {
   username: string | null;
   avatar_url: string | null;
   parent_id?: string | null;
+  gender?: string | null;
 }
 
 export interface ProfileStats {
