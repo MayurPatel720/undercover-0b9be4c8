@@ -14,6 +14,7 @@ export type Database = {
           content: string
           created_at: string | null
           id: string
+          parent_id: string | null
           post_id: string | null
           user_id: string | null
         }
@@ -21,6 +22,7 @@ export type Database = {
           content: string
           created_at?: string | null
           id?: string
+          parent_id?: string | null
           post_id?: string | null
           user_id?: string | null
         }
@@ -28,6 +30,7 @@ export type Database = {
           content?: string
           created_at?: string | null
           id?: string
+          parent_id?: string | null
           post_id?: string | null
           user_id?: string | null
         }
@@ -126,18 +129,21 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          gender: string | null
           id: string
           username: string
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          gender?: string | null
           id: string
           username: string
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
+          gender?: string | null
           id?: string
           username?: string
         }
