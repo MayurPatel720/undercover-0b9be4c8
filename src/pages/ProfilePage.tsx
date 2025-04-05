@@ -89,6 +89,11 @@ const ProfilePage = () => {
     }
   };
 
+  const generateUsername = () => {
+    if (!user) return 'Guest User';
+    return user.user_metadata?.username || user.email?.split('@')[0] || 'User';
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <Header />
@@ -112,20 +117,20 @@ const ProfilePage = () => {
                       />
                     </div>
                   </div>
-                  <h1 className="text-xl font-bold mb-1 text-gray-900 dark:text-white">{user.user_metadata?.username || user.email?.split('@')[0]}</h1>
-                  <p className="text-gray-500 dark:text-gray-300 text-sm">@{user.user_metadata?.username || user.email?.split('@')[0]}</p>
+                  <h1 className="text-xl font-bold mb-1 text-gray-900 dark:text-gray-100">{generateUsername()}</h1>
+                  <p className="text-gray-500 dark:text-gray-300 text-sm">@{generateUsername()}</p>
                   
                   <div className="flex justify-center space-x-6 mt-4">
                     <div className="flex flex-col items-center">
-                      <span className="font-bold text-lg text-gray-900 dark:text-white">{stats.posts_count}</span>
+                      <span className="font-bold text-lg text-gray-900 dark:text-gray-100">{stats.posts_count}</span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">Posts</span>
                     </div>
                     <div className="flex flex-col items-center">
-                      <span className="font-bold text-lg text-gray-900 dark:text-white">{stats.likes_count}</span>
+                      <span className="font-bold text-lg text-gray-900 dark:text-gray-100">{stats.likes_count}</span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">Likes</span>
                     </div>
                     <div className="flex flex-col items-center">
-                      <span className="font-bold text-lg text-gray-900 dark:text-white">{stats.comments_count}</span>
+                      <span className="font-bold text-lg text-gray-900 dark:text-gray-100">{stats.comments_count}</span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">Comments</span>
                     </div>
                   </div>

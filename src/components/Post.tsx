@@ -53,7 +53,8 @@ const Post: React.FC<PostProps> = ({
 }) => {
   const [likes, setLikes] = useState(initialLikes);
   const [liked, setLiked] = useState(false);
-  const [comments, setComments] = useState(initialComments);
+  const [comments, setComments] = useState<Comment[]>(initialComments);
+  const [commentCount, setCommentCount] = useState(initialComments.length);
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -84,41 +85,73 @@ const Post: React.FC<PostProps> = ({
     }
   }, [id, user, realData]);
 
-  // Fetch comments for this post
+  // Fetch comments and update comment count for this post
   useEffect(() => {
-    if (realData && showComments) {
-      const fetchComments = async () => {
+    if (realData) {
+      const fetchCommentCount = async () => {
         try {
           const { data, error } = await supabase
-            .from('comments_with_profiles')
-            .select('*')
-            .eq('post_id', id)
-            .order('created_at', { ascending: false });
-          
-          if (error) {
-            console.error('Error fetching comments:', error);
-            return;
-          }
-          
-          if (data) {
-            const formattedComments: Comment[] = data.map((comment: CommentWithProfile) => ({
-              id: comment.id || '',
-              avatar: comment.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.username || 'anonymous'}`,
-              nickname: comment.username || 'Anonymous',
-              content: comment.content || '',
-              timestamp: formatTimeAgo(comment.created_at || '')
-            }));
+            .from('comments')
+            .select('id', { count: 'exact' })
+            .eq('post_id', id);
             
-            setComments(formattedComments);
+          if (!error) {
+            setCommentCount(data?.length || 0);
           }
         } catch (err) {
-          console.error('Error in comment fetch:', err);
+          console.error('Error fetching comment count:', err);
         }
       };
       
-      fetchComments();
+      fetchCommentCount();
+      
+      if (showComments) {
+        const fetchComments = async () => {
+          try {
+            const { data, error } = await supabase
+              .from('comments_with_profiles')
+              .select('*')
+              .eq('post_id', id)
+              .order('created_at', { ascending: false });
+            
+            if (error) {
+              console.error('Error fetching comments:', error);
+              return;
+            }
+            
+            if (data) {
+              const formattedComments: Comment[] = data.map((comment: CommentWithProfile) => ({
+                id: comment.id || '',
+                avatar: comment.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.username || 'anonymous'}`,
+                nickname: comment.username || generateRandomUsername(),
+                content: comment.content || '',
+                timestamp: formatTimeAgo(comment.created_at || '')
+              }));
+              
+              setComments(formattedComments);
+              setCommentCount(formattedComments.length);
+            }
+          } catch (err) {
+            console.error('Error in comment fetch:', err);
+          }
+        };
+        
+        fetchComments();
+      }
     }
   }, [id, showComments, realData]);
+
+  // Generate a random username for anonymous users
+  const generateRandomUsername = () => {
+    const adjectives = ['Cool', 'Amazing', 'Awesome', 'Super', 'Mega', 'Epic', 'Rad'];
+    const nouns = ['Star', 'Ninja', 'Warrior', 'Hero', 'Coder', 'Genius', 'Master'];
+    const num = Math.floor(Math.random() * 1000);
+    
+    const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    
+    return `${adj}${noun}${num}`;
+  };
 
   const handleLike = async () => {
     if (!user) {
@@ -209,15 +242,17 @@ const Post: React.FC<PostProps> = ({
         
         // Add the new comment to the list
         const commentItem = data[0];
+        const username = profileData?.username || user.user_metadata?.username || user.email?.split('@')[0] || generateRandomUsername();
         const newCommentObj: Comment = {
           id: commentItem.id,
-          avatar: profileData?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profileData?.username || user.email}`,
-          nickname: profileData?.username || user.email?.split('@')[0] || 'Anonymous',
+          avatar: profileData?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+          nickname: username,
           content: commentItem.content,
           timestamp: 'Just now'
         };
         
         setComments(prev => [newCommentObj, ...prev]);
+        setCommentCount(prev => prev + 1);
         setNewComment('');
         
         // Make sure comments are shown after posting
@@ -239,14 +274,16 @@ const Post: React.FC<PostProps> = ({
         setIsSubmitting(false);
       }
     } else {
+      const username = user ? (user.user_metadata?.username || user.email?.split('@')[0] || generateRandomUsername()) : generateRandomUsername();
       const comment: Comment = {
         id: `new-${Date.now()}`,
-        avatar: user ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}` : 'https://source.unsplash.com/random/100x100/?face,me',
-        nickname: user ? (user.user_metadata?.username || user.email?.split('@')[0] || 'Anonymous') : 'You',
+        avatar: user ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}` : 'https://source.unsplash.com/random/100x100/?face,me',
+        nickname: username,
         content: newComment,
         timestamp: 'Just now'
       };
       setComments(prev => [comment, ...prev]);
+      setCommentCount(prev => prev + 1);
       setNewComment('');
       
       // Make sure comments are shown after posting
@@ -416,7 +453,7 @@ const Post: React.FC<PostProps> = ({
               onClick={() => setShowComments(!showComments)}
             >
               <MessageCircle className="h-5 w-5" />
-              <span className="ml-1">{comments.length}</span>
+              <span className="ml-1">{commentCount}</span>
             </Button>
           </div>
           
