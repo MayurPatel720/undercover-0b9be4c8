@@ -8,7 +8,7 @@ import AuthModal from './auth/AuthModal';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { CommentWithProfile } from '@/lib/database.types';
-import { generateRandomUsername, getAvatarUrl } from '@/utils/nameUtils';
+import { generateRandomUsername, getAvatarUrl, getSafeGender } from '@/utils/nameUtils';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -125,7 +125,7 @@ const Post: React.FC<PostProps> = ({
                 
                 return {
                   id: comment.id || '',
-                  avatar: comment.avatar_url || getAvatarUrl(username),
+                  avatar: comment.avatar_url || getAvatarUrl(username, getSafeGender(comment.gender)),
                   nickname: username,
                   content: comment.content || '',
                   timestamp: formatTimeAgo(comment.created_at || ''),
@@ -245,7 +245,7 @@ const Post: React.FC<PostProps> = ({
         const commentItem = data[0];
         const newCommentObj: Comment = {
           id: commentItem.id,
-          avatar: profileData?.avatar_url || getAvatarUrl(username, profileData?.gender),
+          avatar: profileData?.avatar_url || getAvatarUrl(username, getSafeGender(profileData?.gender)),
           nickname: username,
           content: commentItem.content,
           timestamp: 'Just now',
