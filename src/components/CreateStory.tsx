@@ -69,24 +69,30 @@ const CreateStory = ({ onStoryCreated }: { onStoryCreated?: () => void }) => {
 
       if (!urlData?.publicUrl) throw new Error('Failed to get public URL');
 
-      // 3. Create story in database using raw query since the TypeScript types don't recognize the table yet
+      // 3. Create story in database using RPC function if available
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
 
-      const { error } = await supabase.rpc('create_story', {
-        user_id_param: user.id,
-        image_url_param: urlData.publicUrl,
-        expires_at_param: expiresAt.toISOString()
-      });
-
-      if (error) {
-        // Fallback to direct insert if RPC isn't available
-        const { error: insertError } = await supabase.from('stories').insert({
-          user_id: user.id,
-          image_url: urlData.publicUrl,
-          expires_at: expiresAt.toISOString()
+      try {
+        // Try with RPC first
+        const { error } = await supabase.rpc('create_story', {
+          user_id_param: user.id,
+          image_url_param: urlData.publicUrl,
+          expires_at_param: expiresAt.toISOString()
         });
         
+        if (error) throw error;
+      } catch (error) {
+        console.log('RPC error, falling back to direct insert', error);
+        // Fall back to direct insert if RPC isn't available
+        const { error: insertError } = await supabase
+          .from('stories')
+          .insert({
+            user_id: user.id,
+            image_url: urlData.publicUrl,
+            expires_at: expiresAt.toISOString()
+          });
+          
         if (insertError) throw insertError;
       }
 

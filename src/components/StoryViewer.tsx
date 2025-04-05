@@ -34,17 +34,20 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
       const fetchStories = async () => {
         setLoading(true);
         try {
-          // We need to use raw SQL approach since the TypeScript type doesn't recognize stories yet
+          // Try to use RPC function first
           const { data, error } = await supabase.rpc('get_user_stories', {
             user_id_param: userId
-          }).catch(async () => {
-            // Fallback to direct query if RPC doesn't exist
-            return await supabase
-              .from('stories')
-              .select('*')
-              .eq('user_id', userId)
-              .gte('expires_at', new Date().toISOString())
-              .order('created_at', { ascending: true });
+          }).then(response => {
+            if (response.error && response.error.message.includes("function \"get_user_stories\" does not exist")) {
+              // Fallback to direct query if RPC doesn't exist
+              return supabase
+                .from('stories')
+                .select('*')
+                .eq('user_id', userId)
+                .gte('expires_at', new Date().toISOString())
+                .order('created_at', { ascending: true });
+            }
+            return response;
           });
           
           if (error) throw error;
@@ -170,7 +173,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
             <div className="flex items-center space-x-2">
               <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white">
                 <img 
-                  src={currentStory?.avatar_url || getAvatarUrl(currentStory?.username || 'user')} 
+                  src={currentStory?.avatar_url || getAvatarUrl(currentStory?.username || 'user', 'other')} 
                   alt={currentStory?.username} 
                   className="w-full h-full object-cover"
                 />

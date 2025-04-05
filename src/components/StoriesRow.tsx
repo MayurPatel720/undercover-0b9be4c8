@@ -26,8 +26,7 @@ const StoriesRow = () => {
       // Get current timestamp
       const now = new Date();
       
-      // We need to use the raw SQL query approach since the stories table 
-      // is not yet recognized in the TypeScript types
+      // Use the raw SQL query approach for stories
       const { data: storiesData, error } = await supabase
         .from('stories')
         .select('id, user_id, image_url, created_at, expires_at, profiles:user_id(username, avatar_url)')
@@ -41,8 +40,8 @@ const StoriesRow = () => {
       
       if (storiesData) {
         for (const story of storiesData) {
-          // Get profile info
-          const profile = story.profiles;
+          // Get profile info - handle the correct structure
+          const profile = story.profiles as { username: string; avatar_url: string | null } | null;
           const username = profile?.username || generateRandomUsername();
           const avatarUrl = profile?.avatar_url || getAvatarUrl(username);
           

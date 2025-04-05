@@ -36,3 +36,13 @@ export const getAvatarUrl = (username: string, gender?: 'male' | 'female' | 'oth
   
   return `https://api.dicebear.com/7.x/${style}/svg?seed=${seedWithGender}`;
 };
+
+/**
+ * This is a helper function to safely ensure a string gender value is cast to one of the allowed types
+ */
+export const getSafeGender = (gender: string | null | undefined): 'male' | 'female' | 'other' => {
+  if (gender === 'male' || gender === 'female') {
+    return gender;
+  }
+  return 'other';
+};
