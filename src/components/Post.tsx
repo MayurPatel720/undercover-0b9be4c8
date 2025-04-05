@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Share2, MoreHorizontal, Sparkles, ExternalLink, Reply } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -64,7 +63,6 @@ const Post: React.FC<PostProps> = ({
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const { user } = useAuth();
 
-  // Check if the current user has liked this post
   useEffect(() => {
     if (realData && user) {
       const checkLikeStatus = async () => {
@@ -88,7 +86,6 @@ const Post: React.FC<PostProps> = ({
     }
   }, [id, user, realData]);
 
-  // Fetch comments and update comment count for this post
   useEffect(() => {
     if (realData) {
       const fetchCommentCount = async () => {
@@ -124,15 +121,12 @@ const Post: React.FC<PostProps> = ({
             
             if (data) {
               const formattedComments: Comment[] = data.map((comment: CommentWithProfile) => {
-                // Generate anonymous username from the real username
-                const anonymousName = comment.username ? 
-                  `Anonymous${comment.username.split('').reduce((a, b) => a + b.charCodeAt(0), 0) % 1000}` : 
-                  generateRandomUsername();
+                const username = comment.username || generateRandomUsername();
                 
                 return {
                   id: comment.id || '',
-                  avatar: comment.avatar_url || getAvatarUrl(anonymousName),
-                  nickname: anonymousName,
+                  avatar: comment.avatar_url || getAvatarUrl(username),
+                  nickname: username,
                   content: comment.content || '',
                   timestamp: formatTimeAgo(comment.created_at || ''),
                   parent_id: comment.parent_id
@@ -219,13 +213,20 @@ const Post: React.FC<PostProps> = ({
     if (realData) {
       setIsSubmitting(true);
       try {
-        // Create a random anonymous username for the user
-        const anonymousUsername = generateRandomUsername();
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('username, avatar_url, gender')
+          .eq('id', user.id)
+          .single();
         
-        // Store the anonymous username in user metadata if not already present
+        if (profileError) throw profileError;
+        
+        const username = profileData?.username || 
+                        (user.user_metadata?.anonymous_username || generateRandomUsername());
+        
         if (!user.user_metadata?.anonymous_username) {
           await supabase.auth.updateUser({
-            data: { anonymous_username: anonymousUsername }
+            data: { anonymous_username: username }
           });
         }
         
@@ -241,24 +242,11 @@ const Post: React.FC<PostProps> = ({
         
         if (error) throw error;
         
-        // Get commenter profile information
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('username, avatar_url, gender')
-          .eq('id', user.id)
-          .single();
-        
-        if (profileError) throw profileError;
-        
-        // Use the stored anonymous username or generate a new one
-        const displayName = user.user_metadata?.anonymous_username || anonymousUsername;
-        
-        // Add the new comment to the list
         const commentItem = data[0];
         const newCommentObj: Comment = {
           id: commentItem.id,
-          avatar: profileData?.avatar_url || getAvatarUrl(displayName, profileData?.gender),
-          nickname: displayName,
+          avatar: profileData?.avatar_url || getAvatarUrl(username, profileData?.gender),
+          nickname: username,
           content: commentItem.content,
           timestamp: 'Just now',
           parent_id: commentItem.parent_id
@@ -269,7 +257,6 @@ const Post: React.FC<PostProps> = ({
         setNewComment('');
         setReplyingTo(null);
         
-        // Make sure comments are shown after posting
         if (!showComments) {
           setShowComments(true);
         }
@@ -302,7 +289,6 @@ const Post: React.FC<PostProps> = ({
       setNewComment('');
       setReplyingTo(null);
       
-      // Make sure comments are shown after posting
       if (!showComments) {
         setShowComments(true);
       }
@@ -311,7 +297,6 @@ const Post: React.FC<PostProps> = ({
 
   const handleReply = (commentId: string) => {
     setReplyingTo(commentId);
-    // Focus on the comment input
     const inputElement = document.getElementById('comment-input');
     if (inputElement) {
       inputElement.focus();
@@ -324,75 +309,37 @@ const Post: React.FC<PostProps> = ({
       return;
     }
     
-    // Share to external platforms
-    if (platform) {
-      let shareUrl = '';
-      const postUrl = `${window.location.origin}/post/${id}`;
-      const text = `Check out this post by ${nickname}`;
-      
-      switch (platform) {
-        case 'whatsapp':
-          shareUrl = `https://wa.me/?text=${encodeURIComponent(text + ': ' + postUrl)}`;
-          break;
-        case 'twitter':
-          shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(postUrl)}`;
-          break;
-        case 'facebook':
-          shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`;
-          break;
-        case 'linkedin':
-          shareUrl = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(postUrl)}&title=${encodeURIComponent(text)}`;
-          break;
-        case 'telegram':
-          shareUrl = `https://t.me/share/url?url=${encodeURIComponent(postUrl)}&text=${encodeURIComponent(text)}`;
-          break;
-      }
-      
-      if (shareUrl) {
-        window.open(shareUrl, '_blank', 'noopener,noreferrer');
-      }
-      
-      toast({
-        title: 'Shared!',
-        description: `Post shared to ${platform}`,
-      });
-      return;
+    let shareUrl = '';
+    const postUrl = `${window.location.origin}/post/${id}`;
+    const text = `Check out this post by ${nickname}`;
+    
+    switch (platform) {
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=${encodeURIComponent(text + ': ' + postUrl)}`;
+        break;
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(postUrl)}`;
+        break;
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`;
+        break;
+      case 'linkedin':
+        shareUrl = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(postUrl)}&title=${encodeURIComponent(text)}`;
+        break;
+      case 'telegram':
+        shareUrl = `https://t.me/share/url?url=${encodeURIComponent(postUrl)}&text=${encodeURIComponent(text)}`;
+        break;
     }
     
-    // Internal app sharing
-    if (realData) {
-      try {
-        const { error } = await supabase
-          .from('shares')
-          .insert({
-            post_id: id,
-            user_id: user.id
-          });
-          
-        if (error) throw error;
-        
-        toast({
-          title: 'Post shared',
-          description: 'This post has been shared to your profile.'
-        });
-        
-        if (onInteractionUpdated) {
-          onInteractionUpdated();
-        }
-      } catch (error: any) {
-        console.error('Error sharing post:', error);
-        toast({
-          title: 'Error',
-          description: error.message,
-          variant: 'destructive'
-        });
-      }
-    } else {
-      toast({
-        title: 'Post shared',
-        description: 'This post has been shared to your profile.'
-      });
+    if (shareUrl) {
+      window.open(shareUrl, '_blank', 'noopener,noreferrer');
     }
+    
+    toast({
+      title: 'Shared!',
+      description: `Post shared to ${platform}`,
+    });
+    return;
   };
 
   const formatTimeAgo = (dateString: string) => {

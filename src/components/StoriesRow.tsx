@@ -1,6 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import StoryCircle from './StoryCircle';
+import CreateStory from './CreateStory';
+import StoryViewer from './StoryViewer';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { generateRandomUsername, getAvatarUrl } from '@/utils/nameUtils';
@@ -19,74 +21,109 @@ interface Story {
 const StoriesRow = () => {
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewingStory, setViewingStory] = useState<{
+    id: string;
+    userId: string;
+    username: string;
+    avatarUrl: string;
+  } | null>(null);
   const { user } = useAuth();
 
-  useEffect(() => {
-    // For demonstration purposes, we'll create some mock stories
-    // In a real app, you would fetch these from supabase
-    const generateMockStories = () => {
-      const now = new Date();
-      const mockStories: Story[] = [
-        { 
-          id: 'your-story',
-          user_id: user?.id || 'user-1',
-          image_url: 'https://source.unsplash.com/random/300x600/?selfie,1',
-          created_at: new Date().toISOString(),
-          expires_at: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours from now
-          username: user?.user_metadata?.anonymous_username || generateRandomUsername(),
-          avatar_url: user ? getAvatarUrl(user.user_metadata?.anonymous_username || user.email || 'user') : 'https://source.unsplash.com/random/100x100/?portrait,1',
-          viewed: false
-        }
-      ];
-
-      // Generate random stories
-      const userIds = ['user-2', 'user-3', 'user-4', 'user-5', 'user-6', 'user-7'];
+  const fetchStories = async () => {
+    try {
+      setLoading(true);
       
-      for (let i = 0; i < userIds.length; i++) {
-        const username = generateRandomUsername();
-        const storyCreatedTime = new Date(now.getTime() - Math.random() * 23 * 60 * 60 * 1000); // Random time within last 23 hours
-        const expiresAt = new Date(storyCreatedTime.getTime() + 24 * 60 * 60 * 1000); // 24 hours from creation
-        
-        // Only include story if it hasn't expired
-        if (expiresAt > now) {
-          mockStories.push({
-            id: `story-${i + 2}`,
-            user_id: userIds[i],
-            image_url: `https://source.unsplash.com/random/300x600/?person,${i + 2}`,
-            created_at: storyCreatedTime.toISOString(),
-            expires_at: expiresAt.toISOString(),
+      // Get current timestamp
+      const now = new Date();
+      
+      // Fetch all stories that haven't expired
+      const { data: storiesData, error } = await supabase
+        .from('stories')
+        .select(`
+          id,
+          user_id,
+          image_url,
+          created_at,
+          expires_at,
+          profiles:user_id (username, avatar_url)
+        `)
+        .gte('expires_at', now.toISOString())
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      // Format stories data
+      const formattedStories: Story[] = [];
+      
+      if (storiesData) {
+        for (const story of storiesData) {
+          // Get profile info
+          const profile = story.profiles;
+          const username = profile?.username || generateRandomUsername();
+          const avatarUrl = profile?.avatar_url || getAvatarUrl(username);
+          
+          formattedStories.push({
+            id: story.id,
+            user_id: story.user_id,
+            image_url: story.image_url,
+            created_at: story.created_at,
+            expires_at: story.expires_at,
             username: username,
-            avatar_url: getAvatarUrl(username),
-            viewed: Math.random() > 0.5 // Randomly mark some as viewed
+            avatar_url: avatarUrl,
+            viewed: false // In a real app, we'd track this based on the current user
           });
         }
       }
       
-      setStories(mockStories);
+      setStories(formattedStories);
+    } catch (error) {
+      console.error('Error fetching stories:', error);
+    } finally {
       setLoading(false);
-    };
-
-    generateMockStories();
-  }, [user]);
-
-  const checkExpiration = (expiresAt: string): boolean => {
-    const now = new Date();
-    const expiration = new Date(expiresAt);
-    return now < expiration;
+    }
   };
 
-  const getTimeLeft = (expiresAt: string): string => {
-    const now = new Date();
-    const expiration = new Date(expiresAt);
-    const diffMs = expiration.getTime() - now.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  useEffect(() => {
+    fetchStories();
     
-    if (diffHours > 0) {
-      return `${diffHours}h ${diffMinutes}m left`;
-    } else {
-      return `${diffMinutes}m left`;
+    // Set up real-time subscription for new stories
+    const channel = supabase
+      .channel('public:stories')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'stories' }, () => {
+        fetchStories();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  // Group stories by user_id
+  const storiesByUser = stories.reduce<Record<string, Story[]>>((acc, story) => {
+    if (!acc[story.user_id]) {
+      acc[story.user_id] = [];
     }
+    acc[story.user_id].push(story);
+    return acc;
+  }, {});
+
+  // Get unique users with their latest story
+  const uniqueUserStories = Object.values(storiesByUser).map(userStories => {
+    // Sort by created_at to get the latest story first
+    userStories.sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    return userStories[0];
+  });
+
+  const handleStoryClick = (story: Story) => {
+    setViewingStory({
+      id: story.id,
+      userId: story.user_id,
+      username: story.username,
+      avatarUrl: story.avatar_url
+    });
   };
 
   return (
@@ -102,19 +139,33 @@ const StoriesRow = () => {
         </div>
       ) : (
         <div className="flex px-4 py-3 space-x-1">
-          {stories.filter(story => checkExpiration(story.expires_at)).map(story => (
-            <div key={story.id} className="relative">
+          <CreateStory onStoryCreated={fetchStories} />
+          
+          {uniqueUserStories.map(story => (
+            <div 
+              key={story.id} 
+              className="relative cursor-pointer"
+              onClick={() => handleStoryClick(story)}
+            >
               <StoryCircle 
                 avatar={story.avatar_url} 
                 name={story.username}
                 hasUnseenStory={!story.viewed}
               />
-              <div className="absolute -top-1 -right-1 bg-primary text-white text-[8px] rounded-full px-1.5 py-0.5">
-                {getTimeLeft(story.expires_at)}
-              </div>
             </div>
           ))}
         </div>
+      )}
+      
+      {viewingStory && (
+        <StoryViewer
+          isOpen={!!viewingStory}
+          onClose={() => setViewingStory(null)}
+          initialStoryId={viewingStory.id}
+          userId={viewingStory.userId}
+          username={viewingStory.username}
+          avatarUrl={viewingStory.avatarUrl}
+        />
       )}
     </div>
   );
