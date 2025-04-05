@@ -3,8 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, X } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { Story } from '@/lib/database.types';
+import { supabase } from '@/lib/supabase';
+import { StoryWithUser } from '@/lib/database.types';
 import { generateRandomUsername, getAvatarUrl } from '@/utils/nameUtils';
 
 interface StoryViewerProps {
@@ -14,11 +14,6 @@ interface StoryViewerProps {
   userId: string;
   username: string;
   avatarUrl: string;
-}
-
-interface StoryWithUser extends Story {
-  username: string;
-  avatar_url: string;
 }
 
 const StoryViewer: React.FC<StoryViewerProps> = ({
@@ -39,23 +34,34 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
       const fetchStories = async () => {
         setLoading(true);
         try {
-          const { data, error } = await supabase
-            .from('stories')
-            .select('*')
-            .eq('user_id', userId)
-            .gte('expires_at', new Date().toISOString())
-            .order('created_at', { ascending: true });
+          // We need to use raw SQL approach since the TypeScript type doesn't recognize stories yet
+          const { data, error } = await supabase.rpc('get_user_stories', {
+            user_id_param: userId
+          }).catch(async () => {
+            // Fallback to direct query if RPC doesn't exist
+            return await supabase
+              .from('stories')
+              .select('*')
+              .eq('user_id', userId)
+              .gte('expires_at', new Date().toISOString())
+              .order('created_at', { ascending: true });
+          });
           
           if (error) throw error;
           
           // Find index of the initialStoryId
-          const initialIndex = data?.findIndex(story => story.id === initialStoryId) || 0;
+          const initialIndex = data?.findIndex((story: any) => story.id === initialStoryId) || 0;
           
           // Add user info to stories
-          const storiesWithUser = data?.map(story => ({
-            ...story,
+          const storiesWithUser = data?.map((story: any) => ({
+            id: story.id,
+            user_id: story.user_id,
+            image_url: story.image_url,
+            created_at: story.created_at,
+            expires_at: story.expires_at,
             username,
-            avatar_url: avatarUrl
+            avatar_url: avatarUrl,
+            viewed: false
           })) || [];
           
           setStories(storiesWithUser);

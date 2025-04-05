@@ -5,7 +5,7 @@ import Post from '@/components/Post';
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import { User, Settings, Image, MessageCircle, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -48,10 +48,18 @@ const ProfilePage = () => {
         if (profileError) {
           console.error('Error fetching profile:', profileError);
         } else if (profileData) {
-          setUserProfile(profileData);
+          // Make sure the gender is one of the allowed values
+          const safeGender = profileData.gender === 'male' || profileData.gender === 'female' ? 
+            profileData.gender : 'other';
+          
+          setUserProfile({
+            ...profileData,
+            gender: safeGender as 'male' | 'female' | 'other'
+          });
+          
           // Set gender from profile if available
           if (profileData.gender) {
-            setGender(profileData.gender as 'male' | 'female' | 'other');
+            setGender(safeGender as 'male' | 'female' | 'other');
           }
         }
       } catch (error: any) {
@@ -159,7 +167,14 @@ const ProfilePage = () => {
         .single();
         
       if (data) {
-        setUserProfile(data);
+        // Make sure the gender is one of the allowed values
+        const safeGender = data.gender === 'male' || data.gender === 'female' ? 
+          data.gender : 'other';
+            
+        setUserProfile({
+          ...data,
+          gender: safeGender as 'male' | 'female' | 'other'
+        });
       }
     } catch (error: any) {
       toast({

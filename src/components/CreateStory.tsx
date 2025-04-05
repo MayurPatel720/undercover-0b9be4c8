@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Camera, Plus, X } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import { generateRandomUsername, getAvatarUrl } from '@/utils/nameUtils';
@@ -53,7 +53,8 @@ const CreateStory = ({ onStoryCreated }: { onStoryCreated?: () => void }) => {
 
       // 1. Upload image to Supabase Storage
       const fileExt = selectedImage.name.split('.').pop();
-      const filePath = `stories/${user.id}/${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `stories/${user.id}/${fileName}`;
       
       const { error: uploadError, data: uploadData } = await supabase.storage
         .from('media')
@@ -68,19 +69,26 @@ const CreateStory = ({ onStoryCreated }: { onStoryCreated?: () => void }) => {
 
       if (!urlData?.publicUrl) throw new Error('Failed to get public URL');
 
-      // 3. Create story in database
+      // 3. Create story in database using raw query since the TypeScript types don't recognize the table yet
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
 
-      const { error } = await supabase
-        .from('stories')
-        .insert({
+      const { error } = await supabase.rpc('create_story', {
+        user_id_param: user.id,
+        image_url_param: urlData.publicUrl,
+        expires_at_param: expiresAt.toISOString()
+      });
+
+      if (error) {
+        // Fallback to direct insert if RPC isn't available
+        const { error: insertError } = await supabase.from('stories').insert({
           user_id: user.id,
           image_url: urlData.publicUrl,
           expires_at: expiresAt.toISOString()
         });
-
-      if (error) throw error;
+        
+        if (insertError) throw insertError;
+      }
 
       toast({
         title: "Story created",

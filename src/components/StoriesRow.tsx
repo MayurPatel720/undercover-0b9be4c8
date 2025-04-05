@@ -3,23 +3,13 @@ import React, { useState, useEffect } from 'react';
 import StoryCircle from './StoryCircle';
 import CreateStory from './CreateStory';
 import StoryViewer from './StoryViewer';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { generateRandomUsername, getAvatarUrl } from '@/utils/nameUtils';
-
-interface Story {
-  id: string;
-  user_id: string;
-  image_url: string;
-  created_at: string;
-  expires_at: string;
-  username: string;
-  avatar_url: string;
-  viewed: boolean;
-}
+import { Story, StoryWithUser } from '@/lib/database.types';
 
 const StoriesRow = () => {
-  const [stories, setStories] = useState<Story[]>([]);
+  const [stories, setStories] = useState<StoryWithUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewingStory, setViewingStory] = useState<{
     id: string;
@@ -36,24 +26,18 @@ const StoriesRow = () => {
       // Get current timestamp
       const now = new Date();
       
-      // Fetch all stories that haven't expired
+      // We need to use the raw SQL query approach since the stories table 
+      // is not yet recognized in the TypeScript types
       const { data: storiesData, error } = await supabase
         .from('stories')
-        .select(`
-          id,
-          user_id,
-          image_url,
-          created_at,
-          expires_at,
-          profiles:user_id (username, avatar_url)
-        `)
+        .select('id, user_id, image_url, created_at, expires_at, profiles:user_id(username, avatar_url)')
         .gte('expires_at', now.toISOString())
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       
       // Format stories data
-      const formattedStories: Story[] = [];
+      const formattedStories: StoryWithUser[] = [];
       
       if (storiesData) {
         for (const story of storiesData) {
@@ -100,7 +84,7 @@ const StoriesRow = () => {
   }, [user]);
 
   // Group stories by user_id
-  const storiesByUser = stories.reduce<Record<string, Story[]>>((acc, story) => {
+  const storiesByUser = stories.reduce<Record<string, StoryWithUser[]>>((acc, story) => {
     if (!acc[story.user_id]) {
       acc[story.user_id] = [];
     }
@@ -117,7 +101,7 @@ const StoriesRow = () => {
     return userStories[0];
   });
 
-  const handleStoryClick = (story: Story) => {
+  const handleStoryClick = (story: StoryWithUser) => {
     setViewingStory({
       id: story.id,
       userId: story.user_id,

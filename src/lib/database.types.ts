@@ -60,5 +60,10 @@ export interface Story {
   image_url: string;
   created_at: string;
   expires_at: string;
-  viewed: boolean;
+  viewed?: boolean;
+}
+
+export interface StoryWithUser extends Story {
+  username: string;
+  avatar_url: string;
 }
