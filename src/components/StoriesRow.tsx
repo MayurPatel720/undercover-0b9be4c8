@@ -33,7 +33,7 @@ const StoriesRow = () => {
           image_url: 'https://source.unsplash.com/random/300x600/?selfie,1',
           created_at: new Date().toISOString(),
           expires_at: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours from now
-          username: user?.user_metadata?.anonymous_username || 'YourStory',
+          username: user?.user_metadata?.anonymous_username || generateRandomUsername(),
           avatar_url: user ? getAvatarUrl(user.user_metadata?.anonymous_username || user.email || 'user') : 'https://source.unsplash.com/random/100x100/?portrait,1',
           viewed: false
         }
@@ -41,7 +41,6 @@ const StoriesRow = () => {
 
       // Generate random stories
       const userIds = ['user-2', 'user-3', 'user-4', 'user-5', 'user-6', 'user-7'];
-      const names = ['ShadowFox', 'NeonGhost', 'MysteryT', 'VelvetW', 'PhantomC', 'DuskWand'];
       
       for (let i = 0; i < userIds.length; i++) {
         const username = generateRandomUsername();

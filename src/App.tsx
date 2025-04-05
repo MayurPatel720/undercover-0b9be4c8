@@ -9,7 +9,9 @@ import ChatPage from "./pages/ChatPage";
 import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
+import React from 'react'; // Add explicit React import
 
+// Create a client outside of the component
 const queryClient = new QueryClient();
 
 const App = () => (
