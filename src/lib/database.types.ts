@@ -18,6 +18,7 @@ export interface Comment {
   nickname: string;
   content: string;
   timestamp: string;
+  parent_id?: string | null;
 }
 
 export interface PostWithProfile extends Post {
@@ -36,10 +37,28 @@ export interface CommentWithProfile {
   user_id: string | null;
   username: string | null;
   avatar_url: string | null;
+  parent_id?: string | null;
 }
 
 export interface ProfileStats {
   posts_count: number;
   likes_count: number;
   comments_count: number;
+}
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+  created_at: string;
+  gender?: 'male' | 'female' | 'other';
+}
+
+export interface Story {
+  id: string;
+  user_id: string;
+  image_url: string;
+  created_at: string;
+  expires_at: string;
+  viewed: boolean;
 }

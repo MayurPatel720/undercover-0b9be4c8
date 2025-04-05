@@ -10,7 +10,11 @@ import { toast } from '@/components/ui/use-toast';
 import { User, Settings, Image, MessageCircle, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AuthModal from '@/components/auth/AuthModal';
-import { Post as PostType, ProfileStats } from '@/lib/database.types';
+import { Post as PostType, ProfileStats, UserProfile } from '@/lib/database.types';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { getAvatarUrl } from '@/utils/nameUtils';
 
 const ProfilePage = () => {
   const [userPosts, setUserPosts] = useState<PostType[]>([]);
@@ -21,6 +25,9 @@ const ProfilePage = () => {
     comments_count: 0
   });
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [gender, setGender] = useState<'male' | 'female' | 'other'>('other');
+  const [showGenderSelect, setShowGenderSelect] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -29,6 +36,30 @@ const ProfilePage = () => {
       setShowAuthModal(true);
       return;
     }
+
+    const fetchUserProfile = async () => {
+      try {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) {
+          console.error('Error fetching profile:', profileError);
+        } else if (profileData) {
+          setUserProfile(profileData);
+          // Set gender from profile if available
+          if (profileData.gender) {
+            setGender(profileData.gender as 'male' | 'female' | 'other');
+          }
+        }
+      } catch (error: any) {
+        console.error('Error in profile fetch:', error);
+      }
+    };
+
+    fetchUserProfile();
 
     const fetchUserPosts = async () => {
       try {
@@ -91,7 +122,52 @@ const ProfilePage = () => {
 
   const generateUsername = () => {
     if (!user) return 'Guest User';
-    return user.user_metadata?.username || user.email?.split('@')[0] || 'User';
+    return user.user_metadata?.anonymous_username || user.user_metadata?.username || user.email?.split('@')[0] || 'User';
+  };
+
+  const updateGender = async () => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ gender })
+        .eq('id', user.id);
+        
+      if (error) throw error;
+      
+      // Update local avatar
+      const avatarUrl = getAvatarUrl(generateUsername(), gender);
+      
+      await supabase
+        .from('profiles')
+        .update({ avatar_url: avatarUrl })
+        .eq('id', user.id);
+      
+      toast({
+        title: 'Profile updated',
+        description: 'Your gender preference has been saved.',
+      });
+      
+      setShowGenderSelect(false);
+      
+      // Reload profile data
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+        
+      if (data) {
+        setUserProfile(data);
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error updating profile',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
   };
 
   return (
@@ -111,7 +187,7 @@ const ProfilePage = () => {
                   <div className="w-24 h-24 rounded-full p-1 gradient-primary mb-4">
                     <div className="w-full h-full bg-white rounded-full overflow-hidden">
                       <img 
-                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}`}
+                        src={userProfile?.avatar_url || getAvatarUrl(generateUsername(), gender)}
                         alt="Profile" 
                         className="w-full h-full object-cover"
                       />
@@ -133,6 +209,42 @@ const ProfilePage = () => {
                       <span className="font-bold text-lg text-gray-900 dark:text-gray-100">{stats.comments_count}</span>
                       <span className="text-xs text-gray-500 dark:text-gray-400">Comments</span>
                     </div>
+                  </div>
+                  
+                  {/* Gender Select */}
+                  <div className="mt-4 w-full">
+                    {showGenderSelect ? (
+                      <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
+                        <h3 className="text-sm font-medium mb-3 text-gray-800 dark:text-gray-200">Select Gender for Avatar</h3>
+                        <RadioGroup defaultValue={gender} onValueChange={(val) => setGender(val as 'male' | 'female' | 'other')}>
+                          <div className="flex items-center space-x-2 mb-2">
+                            <RadioGroupItem value="male" id="male" />
+                            <Label htmlFor="male" className="text-gray-800 dark:text-gray-200">Male</Label>
+                          </div>
+                          <div className="flex items-center space-x-2 mb-2">
+                            <RadioGroupItem value="female" id="female" />
+                            <Label htmlFor="female" className="text-gray-800 dark:text-gray-200">Female</Label>
+                          </div>
+                          <div className="flex items-center space-x-2 mb-3">
+                            <RadioGroupItem value="other" id="other" />
+                            <Label htmlFor="other" className="text-gray-800 dark:text-gray-200">Other</Label>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button size="sm" variant="default" onClick={updateGender}>Save</Button>
+                            <Button size="sm" variant="outline" onClick={() => setShowGenderSelect(false)}>Cancel</Button>
+                          </div>
+                        </RadioGroup>
+                      </div>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setShowGenderSelect(true)}
+                        className="mt-2 text-xs"
+                      >
+                        Change Avatar
+                      </Button>
+                    )}
                   </div>
                 </div>
                 
@@ -175,7 +287,7 @@ const ProfilePage = () => {
                     <Post
                       key={post.id}
                       id={post.id}
-                      avatar={post.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.username}`}
+                      avatar={post.avatar_url || getAvatarUrl(post.username)}
                       nickname={post.username}
                       content={post.content || ''}
                       image={post.image_url || undefined}

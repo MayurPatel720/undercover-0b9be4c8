@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Share2, MoreHorizontal, Sparkles, ExternalLink } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, Sparkles, ExternalLink, Reply } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -9,6 +9,7 @@ import AuthModal from './auth/AuthModal';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { CommentWithProfile } from '@/lib/database.types';
+import { generateRandomUsername, getAvatarUrl } from '@/utils/nameUtils';
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +23,7 @@ export interface Comment {
   nickname: string;
   content: string;
   timestamp: string;
+  parent_id?: string | null;
 }
 
 interface PostProps {
@@ -59,6 +61,7 @@ const Post: React.FC<PostProps> = ({
   const [newComment, setNewComment] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const { user } = useAuth();
 
   // Check if the current user has liked this post
@@ -120,13 +123,21 @@ const Post: React.FC<PostProps> = ({
             }
             
             if (data) {
-              const formattedComments: Comment[] = data.map((comment: CommentWithProfile) => ({
-                id: comment.id || '',
-                avatar: comment.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.username || 'anonymous'}`,
-                nickname: comment.username || generateRandomUsername(),
-                content: comment.content || '',
-                timestamp: formatTimeAgo(comment.created_at || '')
-              }));
+              const formattedComments: Comment[] = data.map((comment: CommentWithProfile) => {
+                // Generate anonymous username from the real username
+                const anonymousName = comment.username ? 
+                  `Anonymous${comment.username.split('').reduce((a, b) => a + b.charCodeAt(0), 0) % 1000}` : 
+                  generateRandomUsername();
+                
+                return {
+                  id: comment.id || '',
+                  avatar: comment.avatar_url || getAvatarUrl(anonymousName),
+                  nickname: anonymousName,
+                  content: comment.content || '',
+                  timestamp: formatTimeAgo(comment.created_at || ''),
+                  parent_id: comment.parent_id
+                };
+              });
               
               setComments(formattedComments);
               setCommentCount(formattedComments.length);
@@ -140,18 +151,6 @@ const Post: React.FC<PostProps> = ({
       }
     }
   }, [id, showComments, realData]);
-
-  // Generate a random username for anonymous users
-  const generateRandomUsername = () => {
-    const adjectives = ['Cool', 'Amazing', 'Awesome', 'Super', 'Mega', 'Epic', 'Rad'];
-    const nouns = ['Star', 'Ninja', 'Warrior', 'Hero', 'Coder', 'Genius', 'Master'];
-    const num = Math.floor(Math.random() * 1000);
-    
-    const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    
-    return `${adj}${noun}${num}`;
-  };
 
   const handleLike = async () => {
     if (!user) {
@@ -220,12 +219,23 @@ const Post: React.FC<PostProps> = ({
     if (realData) {
       setIsSubmitting(true);
       try {
+        // Create a random anonymous username for the user
+        const anonymousUsername = generateRandomUsername();
+        
+        // Store the anonymous username in user metadata if not already present
+        if (!user.user_metadata?.anonymous_username) {
+          await supabase.auth.updateUser({
+            data: { anonymous_username: anonymousUsername }
+          });
+        }
+        
         const { data, error } = await supabase
           .from('comments')
           .insert({
             post_id: id,
             user_id: user.id,
-            content: newComment.trim()
+            content: newComment.trim(),
+            parent_id: replyingTo
           })
           .select();
         
@@ -234,26 +244,30 @@ const Post: React.FC<PostProps> = ({
         // Get commenter profile information
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('username, avatar_url')
+          .select('username, avatar_url, gender')
           .eq('id', user.id)
           .single();
         
         if (profileError) throw profileError;
         
+        // Use the stored anonymous username or generate a new one
+        const displayName = user.user_metadata?.anonymous_username || anonymousUsername;
+        
         // Add the new comment to the list
         const commentItem = data[0];
-        const username = profileData?.username || user.user_metadata?.username || user.email?.split('@')[0] || generateRandomUsername();
         const newCommentObj: Comment = {
           id: commentItem.id,
-          avatar: profileData?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
-          nickname: username,
+          avatar: profileData?.avatar_url || getAvatarUrl(displayName, profileData?.gender),
+          nickname: displayName,
           content: commentItem.content,
-          timestamp: 'Just now'
+          timestamp: 'Just now',
+          parent_id: commentItem.parent_id
         };
         
         setComments(prev => [newCommentObj, ...prev]);
         setCommentCount(prev => prev + 1);
         setNewComment('');
+        setReplyingTo(null);
         
         // Make sure comments are shown after posting
         if (!showComments) {
@@ -274,22 +288,33 @@ const Post: React.FC<PostProps> = ({
         setIsSubmitting(false);
       }
     } else {
-      const username = user ? (user.user_metadata?.username || user.email?.split('@')[0] || generateRandomUsername()) : generateRandomUsername();
+      const username = user ? (user.user_metadata?.anonymous_username || generateRandomUsername()) : generateRandomUsername();
       const comment: Comment = {
         id: `new-${Date.now()}`,
-        avatar: user ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}` : 'https://source.unsplash.com/random/100x100/?face,me',
+        avatar: getAvatarUrl(username),
         nickname: username,
         content: newComment,
-        timestamp: 'Just now'
+        timestamp: 'Just now',
+        parent_id: replyingTo
       };
       setComments(prev => [comment, ...prev]);
       setCommentCount(prev => prev + 1);
       setNewComment('');
+      setReplyingTo(null);
       
       // Make sure comments are shown after posting
       if (!showComments) {
         setShowComments(true);
       }
+    }
+  };
+
+  const handleReply = (commentId: string) => {
+    setReplyingTo(commentId);
+    // Focus on the comment input
+    const inputElement = document.getElementById('comment-input');
+    if (inputElement) {
+      inputElement.focus();
     }
   };
 
@@ -383,6 +408,11 @@ const Post: React.FC<PostProps> = ({
     return new Date(dateString).toLocaleDateString();
   };
 
+  const getParentComment = (parentId: string | null | undefined) => {
+    if (!parentId) return null;
+    return comments.find(comment => comment.id === parentId);
+  };
+
   return (
     <Card className="mb-4 border-0 shadow-md overflow-hidden bg-white dark:bg-card rounded-2xl">
       <CardHeader className="p-4 pb-2 flex flex-row items-center space-y-0">
@@ -467,23 +497,23 @@ const Post: React.FC<PostProps> = ({
                 <Share2 className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => handleShare()}>
+            <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+              <DropdownMenuItem onClick={() => handleShare()} className="text-gray-700 dark:text-gray-300">
                 Share to profile
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleShare('whatsapp')}>
+              <DropdownMenuItem onClick={() => handleShare('whatsapp')} className="text-gray-700 dark:text-gray-300">
                 Share to WhatsApp
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleShare('twitter')}>
+              <DropdownMenuItem onClick={() => handleShare('twitter')} className="text-gray-700 dark:text-gray-300">
                 Share to Twitter
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleShare('facebook')}>
+              <DropdownMenuItem onClick={() => handleShare('facebook')} className="text-gray-700 dark:text-gray-300">
                 Share to Facebook
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleShare('telegram')}>
+              <DropdownMenuItem onClick={() => handleShare('telegram')} className="text-gray-700 dark:text-gray-300">
                 Share to Telegram
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleShare('linkedin')}>
+              <DropdownMenuItem onClick={() => handleShare('linkedin')} className="text-gray-700 dark:text-gray-300">
                 Share to LinkedIn
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -494,10 +524,11 @@ const Post: React.FC<PostProps> = ({
           <div className="px-4 py-2 border-t border-border w-full">
             <form onSubmit={handleAddComment} className="flex mb-3">
               <input
+                id="comment-input"
                 type="text"
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Add a comment..."
+                placeholder={replyingTo ? "Write a reply..." : "Add a comment..."}
                 className="flex-1 bg-muted rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary text-gray-800 dark:text-white"
               />
               <Button 
@@ -506,9 +537,28 @@ const Post: React.FC<PostProps> = ({
                 className="rounded-full ml-2 bg-primary/10 text-primary hover:bg-primary/20"
                 disabled={!newComment.trim() || isSubmitting}
               >
-                {isSubmitting ? 'Posting...' : 'Post'}
+                {isSubmitting ? 'Posting...' : replyingTo ? 'Reply' : 'Post'}
               </Button>
+              {replyingTo && (
+                <Button 
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-full ml-1"
+                  onClick={() => setReplyingTo(null)}
+                >
+                  Cancel
+                </Button>
+              )}
             </form>
+            
+            {replyingTo && (
+              <div className="mb-3 px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-md">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Replying to comment from <span className="font-medium">{comments.find(c => c.id === replyingTo)?.nickname || "user"}</span>
+                </p>
+              </div>
+            )}
             
             <ScrollArea className="max-h-60 overflow-y-auto">
               {comments.length === 0 ? (
@@ -516,28 +566,51 @@ const Post: React.FC<PostProps> = ({
                   No comments yet. Be the first to comment!
                 </div>
               ) : (
-                comments.map(comment => (
-                  <div key={comment.id} className="flex items-start space-x-2 mb-3">
-                    <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                      <img 
-                        src={comment.avatar} 
-                        alt={comment.nickname} 
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = 'https://source.unsplash.com/random/100x100/?face';
-                        }}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <div className="bg-muted rounded-2xl px-3 py-2">
-                        <div className="font-medium text-xs text-gray-800 dark:text-white">{comment.nickname}</div>
-                        <p className="text-sm text-gray-800 dark:text-white">{comment.content}</p>
+                <div className="space-y-3">
+                  {comments.map(comment => {
+                    const parentComment = getParentComment(comment.parent_id);
+                    
+                    return (
+                      <div key={comment.id} className="flex items-start space-x-2">
+                        <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                          <img 
+                            src={comment.avatar} 
+                            alt={comment.nickname} 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = 'https://source.unsplash.com/random/100x100/?face';
+                            }}
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <div className="bg-gray-100 dark:bg-gray-700 rounded-2xl px-3 py-2">
+                            <div className="font-medium text-xs text-gray-800 dark:text-white">{comment.nickname}</div>
+                            
+                            {parentComment && (
+                              <div className="mb-1 px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded text-xs text-gray-700 dark:text-gray-300">
+                                <span className="font-medium">@{parentComment.nickname}:</span> {parentComment.content.length > 50 ? `${parentComment.content.substring(0, 50)}...` : parentComment.content}
+                              </div>
+                            )}
+                            
+                            <p className="text-sm text-gray-800 dark:text-white">{comment.content}</p>
+                          </div>
+                          <div className="flex items-center mt-1 space-x-3">
+                            <div className="text-xs text-gray-500 dark:text-muted-foreground">{comment.timestamp}</div>
+                            <Button 
+                              size="sm"
+                              variant="ghost"
+                              className="h-auto p-0 text-xs text-gray-500 dark:text-gray-400 hover:text-primary"
+                              onClick={() => handleReply(comment.id)}
+                            >
+                              <Reply className="h-3 w-3 mr-1" /> Reply
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-muted-foreground mt-1">{comment.timestamp}</div>
-                    </div>
-                  </div>
-                ))
+                    );
+                  })}
+                </div>
               )}
             </ScrollArea>
           </div>
