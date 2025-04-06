@@ -19,7 +19,10 @@ const Footer = () => {
         <span className="text-xs mt-1">Home</span>
       </button>
       
-      <button className="flex flex-col items-center justify-center text-muted-foreground">
+      <button 
+        className={`flex flex-col items-center justify-center ${location.pathname === '/discover' ? 'text-accent' : 'text-muted-foreground'}`}
+        onClick={() => navigate('/discover')}
+      >
         <Grid className="w-6 h-6" />
         <span className="text-xs mt-1">Discover</span>
       </button>
@@ -33,7 +36,10 @@ const Footer = () => {
         </div>
       </div>
       
-      <button className="flex flex-col items-center justify-center text-muted-foreground">
+      <button 
+        className={`flex flex-col items-center justify-center ${location.pathname === '/trending' ? 'text-accent' : 'text-muted-foreground'}`}
+        onClick={() => navigate('/trending')}
+      >
         <Sparkles className="w-6 h-6" />
         <span className="text-xs mt-1">Trending</span>
       </button>

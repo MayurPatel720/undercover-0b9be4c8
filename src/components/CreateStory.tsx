@@ -56,11 +56,23 @@ const CreateStory = ({ onStoryCreated }: { onStoryCreated?: () => void }) => {
       const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `stories/${user.id}/${fileName}`;
       
+      // Check if storage bucket exists, create it if not
+      const { data: bucketData, error: bucketError } = await supabase.storage.getBucket('media');
+      if (bucketError && bucketError.message.includes('not found')) {
+        await supabase.storage.createBucket('media', {
+          public: true,
+          fileSizeLimit: 10485760, // 10MB
+        });
+      }
+      
       const { error: uploadError, data: uploadData } = await supabase.storage
         .from('media')
         .upload(filePath, selectedImage);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
 
       // 2. Get public URL
       const { data: urlData } = await supabase.storage
@@ -69,31 +81,21 @@ const CreateStory = ({ onStoryCreated }: { onStoryCreated?: () => void }) => {
 
       if (!urlData?.publicUrl) throw new Error('Failed to get public URL');
 
-      // 3. Create story in database using RPC function if available
+      // 3. Create story in database
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
 
-      try {
-        // Try with RPC first
-        const { error } = await supabase.rpc('create_story', {
-          user_id_param: user.id,
-          image_url_param: urlData.publicUrl,
-          expires_at_param: expiresAt.toISOString()
+      const { error: insertError } = await supabase
+        .from('stories')
+        .insert({
+          user_id: user.id,
+          image_url: urlData.publicUrl,
+          expires_at: expiresAt.toISOString()
         });
         
-        if (error) throw error;
-      } catch (error) {
-        console.log('RPC error, falling back to direct insert', error);
-        // Fall back to direct insert if RPC isn't available
-        const { error: insertError } = await supabase
-          .from('stories')
-          .insert({
-            user_id: user.id,
-            image_url: urlData.publicUrl,
-            expires_at: expiresAt.toISOString()
-          });
-          
-        if (insertError) throw insertError;
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        throw insertError;
       }
 
       toast({

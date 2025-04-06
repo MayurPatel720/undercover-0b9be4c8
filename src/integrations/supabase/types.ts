@@ -192,6 +192,33 @@ export type Database = {
           },
         ]
       }
+      stories: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          image_url: string
+          user_id: string
+          viewed_by: Json | null
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          image_url: string
+          user_id: string
+          viewed_by?: Json | null
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          image_url?: string
+          user_id?: string
+          viewed_by?: Json | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       comments_with_profiles: {
