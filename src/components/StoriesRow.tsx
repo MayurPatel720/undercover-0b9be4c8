@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { generateRandomUsername, getAvatarUrl } from '@/utils/nameUtils';
 import { Story, StoryWithUser } from '@/lib/database.types';
+import { toast } from '@/components/ui/use-toast';
 
 const StoriesRow = () => {
   const [stories, setStories] = useState<StoryWithUser[]>([]);
@@ -18,6 +19,7 @@ const StoriesRow = () => {
     avatarUrl: string;
   } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewedStories, setViewedStories] = useState<string[]>([]);
   const { user } = useAuth();
 
   const fetchStories = async () => {
@@ -27,24 +29,41 @@ const StoriesRow = () => {
       // Get current timestamp
       const now = new Date();
       
-      // Use the raw SQL query approach for stories
+      // Fetch stories directly
       const { data: storiesData, error } = await supabase
         .from('stories')
-        .select('id, user_id, image_url, created_at, expires_at, profiles:user_id(username, avatar_url)')
+        .select('*, profiles:user_id(username, avatar_url)')
         .gte('expires_at', now.toISOString())
         .order('created_at', { ascending: false });
       
       if (error) throw error;
+      
+      // Fetch viewed stories for the current user
+      let viewedIds: string[] = [];
+      if (user) {
+        const { data: viewedData } = await supabase
+          .from('stories')
+          .select('id, viewed_by')
+          .contains('viewed_by', [user.id]);
+        
+        if (viewedData) {
+          viewedIds = viewedData.map(story => story.id);
+        }
+        setViewedStories(viewedIds);
+      }
       
       // Format stories data
       const formattedStories: StoryWithUser[] = [];
       
       if (storiesData) {
         for (const story of storiesData) {
-          // Get profile info - handle the correct structure
+          // Get profile info
           const profileData = story.profiles as unknown as { username: string; avatar_url: string | null } | null;
           const username = profileData?.username || generateRandomUsername();
           const avatarUrl = profileData?.avatar_url || getAvatarUrl(username);
+          
+          // Check if story is viewed by current user
+          const isViewed = viewedIds.includes(story.id);
           
           formattedStories.push({
             id: story.id,
@@ -54,14 +73,19 @@ const StoriesRow = () => {
             expires_at: story.expires_at,
             username: username,
             avatar_url: avatarUrl,
-            viewed: false // In a real app, we'd track this based on the current user
+            viewed: isViewed
           });
         }
       }
       
       setStories(formattedStories);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching stories:', error);
+      toast({
+        title: "Failed to load stories",
+        description: error.message || "An error occurred",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -73,8 +97,20 @@ const StoriesRow = () => {
     // Set up real-time subscription for new stories
     const channel = supabase
       .channel('public:stories')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'stories' }, () => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'stories' }, (payload) => {
         fetchStories();
+        
+        // Show notification for new story
+        if (payload.new && payload.new.user_id !== user?.id) {
+          // Get username of the user who posted the story
+          fetchUserName(payload.new.user_id).then(username => {
+            toast({
+              title: "New Story",
+              description: `${username} just added a new story!`,
+              variant: "default",
+            });
+          });
+        }
       })
       .subscribe();
       
@@ -82,6 +118,21 @@ const StoriesRow = () => {
       supabase.removeChannel(channel);
     };
   }, [user]);
+
+  // Fetch username for notifications
+  const fetchUserName = async (userId: string): Promise<string> => {
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', userId)
+        .single();
+      
+      return data?.username || 'Someone';
+    } catch {
+      return 'Someone';
+    }
+  };
 
   // Group stories by user_id
   const storiesByUser = stories.reduce<Record<string, StoryWithUser[]>>((acc, story) => {
@@ -98,7 +149,15 @@ const StoriesRow = () => {
     userStories.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
-    return userStories[0];
+    
+    // Check if any stories by this user are unviewed
+    const hasUnseenStory = userStories.some(story => !story.viewed);
+    
+    // Attach this info to the first story
+    return {
+      ...userStories[0],
+      hasUnseenStory
+    };
   });
 
   // Filter stories based on search query
@@ -115,6 +174,38 @@ const StoriesRow = () => {
       username: story.username,
       avatarUrl: story.avatar_url
     });
+    
+    // Mark story as viewed
+    if (user && !story.viewed) {
+      markStoryAsViewed(story.id);
+    }
+  };
+  
+  // Mark a story as viewed
+  const markStoryAsViewed = async (storyId: string) => {
+    if (!user) return;
+    
+    try {
+      // Update the viewed_by array for this story
+      const { error } = await supabase
+        .from('stories')
+        .update({ 
+          viewed_by: supabase.sql`array_append(viewed_by, ${user.id})` 
+        })
+        .eq('id', storyId);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setViewedStories(prev => [...prev, storyId]);
+      setStories(prevStories => 
+        prevStories.map(story => 
+          story.id === storyId ? { ...story, viewed: true } : story
+        )
+      );
+    } catch (error) {
+      console.error('Error marking story as viewed:', error);
+    }
   };
 
   return (
@@ -153,7 +244,7 @@ const StoriesRow = () => {
                 <StoryCircle 
                   avatar={story.avatar_url} 
                   name={story.username}
-                  hasUnseenStory={!story.viewed}
+                  hasUnseenStory={story.hasUnseenStory}
                 />
               </div>
             ))}

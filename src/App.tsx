@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import ChatPage from "./pages/ChatPage";
 import ProfilePage from "./pages/ProfilePage";
 import DiscoverPage from "./pages/DiscoverPage";
+import TrendingPage from "./pages/TrendingPage";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
 import React from 'react';
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/discover" element={<DiscoverPage />} />
+            <Route path="/trending" element={<TrendingPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

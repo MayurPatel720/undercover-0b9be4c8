@@ -211,12 +211,14 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
             <ArrowRight className="h-8 w-8" />
           </Button>
           
-          <style jsx>{`
-            @keyframes progress {
-              0% { width: 0; }
-              100% { width: 100%; }
-            }
-          `}</style>
+          <style>
+            {`
+              @keyframes progress {
+                0% { width: 0; }
+                100% { width: 100%; }
+              }
+            `}
+          </style>
         </div>
       </DialogContent>
     </Dialog>
