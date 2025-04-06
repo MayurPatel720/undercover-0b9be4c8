@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { StoryWithUser } from '@/lib/database.types';
 import { generateRandomUsername, getAvatarUrl } from '@/utils/nameUtils';
 import { toast } from '@/components/ui/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface StoryViewerProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
   const [stories, setStories] = useState<StoryWithUser[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   // Effect to fetch all stories for this user
   useEffect(() => {
@@ -102,10 +103,35 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
   }, [currentIndex, stories.length, loading]);
 
   const markStoryAsViewed = async (storyId: string) => {
+    if (!user) return;
+    
     try {
-      // In a real app, you would track views in a separate table
-      // For now we'll just console log it
-      console.log('Marking story as viewed:', storyId);
+      // Get current viewed_by array
+      const { data, error: fetchError } = await supabase
+        .from('stories')
+        .select('viewed_by')
+        .eq('id', storyId)
+        .single();
+        
+      if (fetchError) {
+        console.error('Error fetching viewed_by:', fetchError);
+        return;
+      }
+      
+      // Update viewed_by array if user isn't already in it
+      const viewedBy = data?.viewed_by || [];
+      if (!viewedBy.includes(user.id)) {
+        const updatedViewedBy = [...viewedBy, user.id];
+        
+        const { error: updateError } = await supabase
+          .from('stories')
+          .update({ viewed_by: updatedViewedBy })
+          .eq('id', storyId);
+          
+        if (updateError) {
+          console.error('Error updating viewed_by:', updateError);
+        }
+      }
     } catch (error) {
       console.error('Error marking story as viewed:', error);
     }
@@ -137,7 +163,6 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md p-0 overflow-hidden max-h-[80vh]">
         <div className="relative h-[80vh]">
-          {/* Story image */}
           {loading ? (
             <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -150,7 +175,6 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
             />
           )}
           
-          {/* Progress indicators */}
           <div className="absolute top-0 left-0 right-0 flex p-1 space-x-1">
             {stories.map((_, index) => (
               <div
@@ -169,7 +193,6 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
             ))}
           </div>
           
-          {/* Header */}
           <div className="absolute top-0 left-0 right-0 p-4 flex items-center">
             <div className="flex items-center space-x-2">
               <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white">
@@ -191,7 +214,6 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
             </Button>
           </div>
           
-          {/* Navigation controls */}
           <Button
             variant="ghost"
             size="icon"

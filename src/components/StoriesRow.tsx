@@ -29,14 +29,31 @@ const StoriesRow = () => {
       // Get current timestamp
       const now = new Date();
       
-      // Fetch stories directly
+      // Direct query instead of using relationships
       const { data: storiesData, error } = await supabase
         .from('stories')
-        .select('*, profiles:user_id(username, avatar_url)')
+        .select('*')
         .gte('expires_at', now.toISOString())
         .order('created_at', { ascending: false });
       
       if (error) throw error;
+      
+      // Fetch profiles separately to get usernames and avatars
+      const userIds = storiesData?.map(story => story.user_id) || [];
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url')
+        .in('id', userIds);
+      
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+      }
+      
+      // Create a map of user IDs to profile data
+      const profilesMap = (profilesData || []).reduce((map, profile) => {
+        map[profile.id] = profile;
+        return map;
+      }, {} as Record<string, any>);
       
       // Fetch viewed stories for the current user
       let viewedIds: string[] = [];
@@ -57,13 +74,14 @@ const StoriesRow = () => {
       
       if (storiesData) {
         for (const story of storiesData) {
-          // Get profile info
-          const profileData = story.profiles as unknown as { username: string; avatar_url: string | null } | null;
+          // Get profile info from the map
+          const profileData = profilesMap[story.user_id];
           const username = profileData?.username || generateRandomUsername();
           const avatarUrl = profileData?.avatar_url || getAvatarUrl(username);
           
           // Check if story is viewed by current user
-          const isViewed = viewedIds.includes(story.id);
+          const viewed_by = story.viewed_by || [];
+          const isViewed = user ? viewed_by.includes(user.id) : false;
           
           formattedStories.push({
             id: story.id,
@@ -186,42 +204,44 @@ const StoriesRow = () => {
     if (!user) return;
     
     try {
-      // Update the viewed_by array for this story
-      // Fix: Instead of using supabase.sql, use a proper array append operation
-      const { data, error } = await supabase
+      // Get current viewed_by array
+      const { data, error: fetchError } = await supabase
         .from('stories')
-        .update({ 
-          viewed_by: [...(await getCurrentViewedBy(storyId)), user.id]
-        })
-        .eq('id', storyId);
+        .select('viewed_by')
+        .eq('id', storyId)
+        .single();
+        
+      if (fetchError) {
+        console.error('Error fetching viewed_by:', fetchError);
+        return;
+      }
       
-      if (error) throw error;
-      
-      // Update local state
-      setViewedStories(prev => [...prev, storyId]);
-      setStories(prevStories => 
-        prevStories.map(story => 
-          story.id === storyId ? { ...story, viewed: true } : story
-        )
-      );
+      // Update viewed_by array if user isn't already in it
+      const viewedBy = data?.viewed_by || [];
+      if (!viewedBy.includes(user.id)) {
+        const updatedViewedBy = [...viewedBy, user.id];
+        
+        const { error: updateError } = await supabase
+          .from('stories')
+          .update({ viewed_by: updatedViewedBy })
+          .eq('id', storyId);
+          
+        if (updateError) {
+          console.error('Error updating viewed_by:', updateError);
+          return;
+        }
+        
+        // Update local state
+        setViewedStories(prev => [...prev, storyId]);
+        setStories(prevStories => 
+          prevStories.map(story => 
+            story.id === storyId ? { ...story, viewed: true } : story
+          )
+        );
+      }
     } catch (error) {
       console.error('Error marking story as viewed:', error);
     }
-  };
-
-  // Helper function to get current viewed_by array
-  const getCurrentViewedBy = async (storyId: string): Promise<string[]> => {
-    const { data, error } = await supabase
-      .from('stories')
-      .select('viewed_by')
-      .eq('id', storyId)
-      .single();
-    
-    if (error || !data || !data.viewed_by) {
-      return [];
-    }
-    
-    return data.viewed_by as string[];
   };
 
   return (
