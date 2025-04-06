@@ -187,10 +187,11 @@ const StoriesRow = () => {
     
     try {
       // Update the viewed_by array for this story
-      const { error } = await supabase
+      // Fix: Instead of using supabase.sql, use a proper array append operation
+      const { data, error } = await supabase
         .from('stories')
         .update({ 
-          viewed_by: supabase.sql`array_append(viewed_by, ${user.id})` 
+          viewed_by: [...(await getCurrentViewedBy(storyId)), user.id]
         })
         .eq('id', storyId);
       
@@ -206,6 +207,21 @@ const StoriesRow = () => {
     } catch (error) {
       console.error('Error marking story as viewed:', error);
     }
+  };
+
+  // Helper function to get current viewed_by array
+  const getCurrentViewedBy = async (storyId: string): Promise<string[]> => {
+    const { data, error } = await supabase
+      .from('stories')
+      .select('viewed_by')
+      .eq('id', storyId)
+      .single();
+    
+    if (error || !data || !data.viewed_by) {
+      return [];
+    }
+    
+    return data.viewed_by as string[];
   };
 
   return (
