@@ -211,8 +211,8 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
             <ArrowRight className="h-8 w-8" />
           </Button>
           
-          {/* Add animation for progress bar */}
-          <style jsx>{`
+          {/* CSS for progress animation */}
+          <style>{`
             @keyframes progress {
               0% { width: 0; }
               100% { width: 100%; }
