@@ -53,6 +53,8 @@ export interface UserProfile {
   avatar_url: string | null;
   created_at: string;
   gender?: 'male' | 'female' | 'other';
+  birth_date?: string | null;
+  mobile_number?: string | null;
 }
 
 export interface Story {

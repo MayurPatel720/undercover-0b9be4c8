@@ -15,6 +15,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { getAvatarUrl } from '@/utils/nameUtils';
+import ProfileSettings from '@/components/profile/ProfileSettings';
 
 const ProfilePage = () => {
   const [userPosts, setUserPosts] = useState<PostType[]>([]);
@@ -28,6 +29,7 @@ const ProfilePage = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [gender, setGender] = useState<'male' | 'female' | 'other'>('other');
   const [showGenderSelect, setShowGenderSelect] = useState(false);
+  const [showProfileSettings, setShowProfileSettings] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -185,6 +187,37 @@ const ProfilePage = () => {
     }
   };
 
+  const openProfileSettings = () => {
+    setShowProfileSettings(true);
+  };
+
+  const closeProfileSettings = () => {
+    setShowProfileSettings(false);
+    // Refresh user profile after settings are closed
+    if (user) {
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+        .then(({ data, error }) => {
+          if (!error && data) {
+            const safeGender = data.gender === 'male' || data.gender === 'female' ? 
+              data.gender : 'other';
+            
+            setUserProfile({
+              ...data,
+              gender: safeGender as 'male' | 'female' | 'other'
+            });
+            
+            if (data.gender) {
+              setGender(safeGender as 'male' | 'female' | 'other');
+            }
+          }
+        });
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <Header />
@@ -226,8 +259,18 @@ const ProfilePage = () => {
                     </div>
                   </div>
                   
-                  {/* Gender Select */}
-                  <div className="mt-4 w-full">
+                  {/* Profile actions */}
+                  <div className="flex space-x-2 mt-4">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={openProfileSettings}
+                      className="text-xs"
+                    >
+                      Edit Profile
+                    </Button>
+                    
+                    {/* Legacy gender selection - could be removed when profile settings is fully implemented */}
                     {showGenderSelect ? (
                       <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
                         <h3 className="text-sm font-medium mb-3 text-gray-800 dark:text-gray-200">Select Gender for Avatar</h3>
@@ -250,18 +293,32 @@ const ProfilePage = () => {
                           </div>
                         </RadioGroup>
                       </div>
-                    ) : (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => setShowGenderSelect(true)}
-                        className="mt-2 text-xs"
-                      >
-                        Change Avatar
-                      </Button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
+                
+                {/* User profile info */}
+                {userProfile?.birth_date || userProfile?.mobile_number ? (
+                  <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <h3 className="text-sm font-semibold mb-2 text-gray-800 dark:text-gray-200">Profile Information</h3>
+                    <div className="space-y-2 text-sm">
+                      {userProfile.birth_date && (
+                        <div className="flex items-start">
+                          <span className="text-gray-600 dark:text-gray-400 w-24">Birth Date:</span>
+                          <span className="text-gray-800 dark:text-gray-200">
+                            {new Date(userProfile.birth_date).toLocaleDateString()}
+                          </span>
+                        </div>
+                      )}
+                      {userProfile.mobile_number && (
+                        <div className="flex items-start">
+                          <span className="text-gray-600 dark:text-gray-400 w-24">Mobile:</span>
+                          <span className="text-gray-800 dark:text-gray-200">{userProfile.mobile_number}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
                 
                 <div className="grid grid-cols-4 gap-3 mt-6">
                   <div className="flex flex-col items-center justify-center p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
@@ -276,7 +333,10 @@ const ProfilePage = () => {
                     <Heart className="h-5 w-5 mb-1 text-primary" />
                     <span className="text-xs text-center text-gray-700 dark:text-gray-300">Likes</span>
                   </div>
-                  <div className="flex flex-col items-center justify-center p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                  <div 
+                    className="flex flex-col items-center justify-center p-3 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
+                    onClick={openProfileSettings}
+                  >
                     <Settings className="h-5 w-5 mb-1 text-primary" />
                     <span className="text-xs text-center text-gray-700 dark:text-gray-300">Settings</span>
                   </div>
@@ -321,6 +381,11 @@ const ProfilePage = () => {
       </main>
       <Footer />
       <AuthModal isOpen={showAuthModal} onClose={handleAuthModalClose} />
+      <ProfileSettings 
+        isOpen={showProfileSettings}
+        onClose={closeProfileSettings}
+        userProfile={userProfile}
+      />
     </div>
   );
 };
