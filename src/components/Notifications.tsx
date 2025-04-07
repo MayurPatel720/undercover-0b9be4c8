@@ -15,19 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
-
-type NotificationType = 'post' | 'like' | 'comment' | 'story' | 'follow';
-
-interface Notification {
-  id: string;
-  type: NotificationType;
-  message: string;
-  timestamp: string;
-  read: boolean;
-  actorName: string;
-  actorAvatar: string;
-  entityId?: string; // Post ID, comment ID, etc.
-}
+import { Notification } from '@/lib/database.types';
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -36,79 +24,51 @@ const Notifications = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // This is just a mock implementation - in a real app you would fetch notifications from your database
+  // Fetch notifications from database
   useEffect(() => {
     if (!user) return;
 
-    // Initialize with some mock data
-    const mockNotifications: Notification[] = [
-      {
-        id: '1',
-        type: 'post',
-        message: 'created a new post',
-        timestamp: new Date(Date.now() - 5 * 60000).toISOString(),
-        read: false,
-        actorName: 'EpicUser123',
-        actorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=EpicUser123'
-      },
-      {
-        id: '2',
-        type: 'like',
-        message: 'liked your post',
-        timestamp: new Date(Date.now() - 30 * 60000).toISOString(),
-        read: false,
-        actorName: 'CoolCat88',
-        actorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=CoolCat88',
-        entityId: '123'
-      },
-      {
-        id: '3',
-        type: 'comment',
-        message: 'commented on your post',
-        timestamp: new Date(Date.now() - 2 * 3600000).toISOString(),
-        read: true,
-        actorName: 'MegaFan42',
-        actorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=MegaFan42',
-        entityId: '123'
-      },
-      {
-        id: '4',
-        type: 'story',
-        message: 'added a new story',
-        timestamp: new Date(Date.now() - 24 * 3600000).toISOString(),
-        read: true,
-        actorName: 'StarGazer',
-        actorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=StarGazer'
-      }
-    ];
-
-    setNotifications(mockNotifications);
-    setUnreadCount(mockNotifications.filter(n => !n.read).length);
-
-    // Setup subscription for new posts
-    const channel = supabase
-      .channel('public:posts')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
-        if (payload.new && payload.new.user_id !== user.id) {
-          // Fetch user info
-          fetchUserInfo(payload.new.user_id).then(userInfo => {
-            if (userInfo) {
-              const newNotification: Notification = {
-                id: payload.new.id,
-                type: 'post',
-                message: 'created a new post',
-                timestamp: new Date().toISOString(),
-                read: false,
-                actorName: userInfo.username,
-                actorAvatar: userInfo.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userInfo.username}`
-              };
-
-              setNotifications(prev => [newNotification, ...prev]);
-              setUnreadCount(prev => prev + 1);
-            }
-          });
+    // Initial fetch of notifications
+    const fetchNotifications = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(20);
+          
+        if (error) throw error;
+        
+        if (data) {
+          setNotifications(data);
+          setUnreadCount(data.filter(notification => !notification.read).length);
         }
-      })
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      }
+    };
+
+    fetchNotifications();
+
+    // Setup subscription for real-time notifications
+    const channel = supabase
+      .channel('public:notifications')
+      .on('postgres_changes', 
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        }, 
+        (payload) => {
+          if (payload.new) {
+            // Add the new notification
+            setNotifications(prev => [payload.new as Notification, ...prev]);
+            setUnreadCount(prev => prev + 1);
+          }
+        }
+      )
       .subscribe();
 
     return () => {
@@ -116,60 +76,77 @@ const Notifications = () => {
     };
   }, [user]);
 
-  // Helper function to fetch user info
-  const fetchUserInfo = async (userId: string) => {
+  const markAllAsRead = async () => {
+    if (!user || unreadCount === 0) return;
+    
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('username, avatar_url')
-        .eq('id', userId)
-        .single();
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', user.id)
+        .eq('read', false);
         
       if (error) throw error;
-      return data;
+      
+      setNotifications(prevNotifications => 
+        prevNotifications.map(notification => ({
+          ...notification,
+          read: true
+        }))
+      );
+      setUnreadCount(0);
     } catch (error) {
-      console.error('Error fetching user info:', error);
-      return null;
+      console.error('Error marking notifications as read:', error);
     }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prevNotifications => 
-      prevNotifications.map(notification => ({
-        ...notification,
-        read: true
-      }))
-    );
-    setUnreadCount(0);
+  const markAsRead = async (id: string) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      setNotifications(prevNotifications => 
+        prevNotifications.map(notification => {
+          if (notification.id === id && !notification.read) {
+            setUnreadCount(prev => prev - 1);
+            return { ...notification, read: true };
+          }
+          return notification;
+        })
+      );
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
-  const markAsRead = (id: string) => {
-    setNotifications(prevNotifications => 
-      prevNotifications.map(notification => {
-        if (notification.id === id && !notification.read) {
-          setUnreadCount(prev => prev - 1);
-          return { ...notification, read: true };
-        }
-        return notification;
-      })
-    );
-  };
-
-  const handleNotificationClick = (notification: Notification) => {
-    markAsRead(notification.id);
+  const handleNotificationClick = async (notification: Notification) => {
+    await markAsRead(notification.id);
     
     // Navigate based on notification type
-    if (notification.entityId) {
-      // In a real app, you would navigate to the specific post, comment, etc.
-      // navigate(`/post/${notification.entityId}`);
-      console.log(`Navigate to: /post/${notification.entityId}`);
+    if (notification.entity_id) {
+      if (notification.type === 'post') {
+        // Navigate to post
+        navigate(`/post/${notification.entity_id}`);
+      } else if (notification.type === 'comment') {
+        // Navigate to the comment's post
+        navigate(`/post/${notification.entity_id}`);
+      } else if (notification.type === 'follow') {
+        // Navigate to user profile
+        navigate(`/profile/${notification.actor_id}`);
+      }
     }
     
     // Close the notifications panel
     setOpen(false);
   };
 
-  const getNotificationIcon = (type: NotificationType) => {
+  const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'post':
         return <Image className="h-4 w-4" />;
@@ -252,21 +229,20 @@ const Notifications = () => {
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src={notification.actorAvatar} alt={notification.actorName} />
+                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${notification.actor_id || 'user'}`} alt="User" />
                     <AvatarFallback>
-                      {notification.actorName.substring(0, 2).toUpperCase()}
+                      U
                     </AvatarFallback>
                   </Avatar>
                   
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-1">
-                      <span className="font-medium text-sm">{notification.actorName}</span>
-                      <span className="text-sm text-muted-foreground">{notification.message}</span>
+                      <span className="text-sm">{notification.content}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       {getNotificationIcon(notification.type)}
                       <span className="text-xs text-muted-foreground">
-                        {formatTimeAgo(notification.timestamp)}
+                        {formatTimeAgo(notification.created_at)}
                       </span>
                     </div>
                   </div>

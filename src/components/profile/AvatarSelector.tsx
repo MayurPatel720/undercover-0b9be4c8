@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog } from '@/components/ui/dialog';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -47,11 +47,12 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
     { value: 'identicon', label: 'Abstract', description: 'Abstract pattern avatars' }
   ];
 
-  React.useEffect(() => {
+  // Generate avatar options when component mounts or style changes
+  useEffect(() => {
     if (selectedTab === 'preset') {
       generateAvatarOptions();
     }
-  }, [selectedStyle]);
+  }, [selectedStyle, username]);
 
   const generateAvatarOptions = () => {
     // Generate multiple avatar options with the selected style
@@ -116,12 +117,20 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
     try {
       setUploading(true);
       
-      // Create storage bucket if it doesn't exist (this would normally be done via SQL)
+      // Create a bucket for avatars if it doesn't exist
+      const { error: bucketError } = await supabase.storage.createBucket('avatars', {
+        public: true,
+        fileSizeLimit: 5242880 // 5MB
+      });
+      
+      if (bucketError && bucketError.message !== 'Bucket already exists') {
+        throw bucketError;
+      }
       
       // Upload the file
       const fileExt = uploadedFile.name.split('.').pop();
       const fileName = `${user.id}-${uuidv4()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const filePath = `${fileName}`;
       
       const { error: uploadError } = await supabase.storage
         .from('avatars')

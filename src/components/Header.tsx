@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,7 @@ const Header = () => {
     <header className="fixed top-0 left-0 w-full z-50 bg-background/95 border-b border-border backdrop-blur-sm">
       <div className="flex justify-between items-center h-14 px-4 max-w-screen-xl mx-auto">
         <Link to="/" className="flex items-center font-semibold">
-          <span className="text-2xl font-bold">Fakebook</span>
+          <span className="text-2xl font-bold">Undercover</span>
         </Link>
         
         <div className="flex items-center space-x-2">
