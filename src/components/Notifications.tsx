@@ -7,7 +7,7 @@ import {
   SheetTitle,
   SheetTrigger
 } from '@/components/ui/sheet';
-import { Bell, User, Image, MessageCircle, Heart, X } from 'lucide-react';
+import { Bell, User, Image, MessageCircle, Heart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import { supabase } from '@/lib/supabase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
 import { Notification } from '@/lib/database.types';
+import { useToast } from '@/hooks/use-toast';
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -23,6 +24,7 @@ const Notifications = () => {
   const [open, setOpen] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   // Fetch notifications from database
   useEffect(() => {
@@ -31,21 +33,25 @@ const Notifications = () => {
     // Initial fetch of notifications
     const fetchNotifications = async () => {
       try {
+        // Use the rpc method instead to avoid typing issues
         const { data, error } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', user.id)
+          .rpc('get_user_notifications', { user_id_param: user.id })
           .order('created_at', { ascending: false })
           .limit(20);
           
         if (error) throw error;
         
         if (data) {
-          setNotifications(data as Notification[]);
-          setUnreadCount(data.filter(notification => !notification.read).length);
+          setNotifications(data as unknown as Notification[]);
+          setUnreadCount(data.filter((notification: any) => !notification.read).length);
         }
       } catch (error) {
         console.error('Error fetching notifications:', error);
+        toast({
+          title: "Error fetching notifications",
+          description: "Please try again later",
+          variant: "destructive",
+        });
       }
     };
 
@@ -64,8 +70,14 @@ const Notifications = () => {
         (payload) => {
           if (payload.new) {
             // Add the new notification
-            setNotifications(prev => [payload.new as Notification, ...prev]);
+            setNotifications(prev => [payload.new as unknown as Notification, ...prev]);
             setUnreadCount(prev => prev + 1);
+
+            // Show a toast notification
+            toast({
+              title: "New Notification",
+              description: (payload.new as any).content,
+            });
           }
         }
       )
@@ -74,17 +86,15 @@ const Notifications = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, toast]);
 
   const markAllAsRead = async () => {
     if (!user || unreadCount === 0) return;
     
     try {
+      // Use rpc method to mark all as read
       const { error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('user_id', user.id)
-        .eq('read', false);
+        .rpc('mark_all_notifications_as_read', { user_id_param: user.id });
         
       if (error) throw error;
       
@@ -95,8 +105,17 @@ const Notifications = () => {
         }))
       );
       setUnreadCount(0);
+      
+      toast({
+        title: "All notifications marked as read",
+      });
     } catch (error) {
       console.error('Error marking notifications as read:', error);
+      toast({
+        title: "Error updating notifications",
+        description: "Please try again later",
+        variant: "destructive",
+      });
     }
   };
 
@@ -104,10 +123,9 @@ const Notifications = () => {
     if (!user) return;
     
     try {
+      // Use rpc method to mark a single notification as read
       const { error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('id', id);
+        .rpc('mark_notification_as_read', { notification_id_param: id });
         
       if (error) throw error;
       
@@ -122,6 +140,11 @@ const Notifications = () => {
       );
     } catch (error) {
       console.error('Error marking notification as read:', error);
+      toast({
+        title: "Error updating notification",
+        description: "Please try again later",
+        variant: "destructive",
+      });
     }
   };
 
