@@ -41,7 +41,7 @@ const Notifications = () => {
         if (error) throw error;
         
         if (data) {
-          setNotifications(data);
+          setNotifications(data as Notification[]);
           setUnreadCount(data.filter(notification => !notification.read).length);
         }
       } catch (error) {
