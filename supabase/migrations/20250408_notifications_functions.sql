@@ -1,11 +1,21 @@
 
 -- Function to get user notifications
 CREATE OR REPLACE FUNCTION public.get_user_notifications(user_id_param UUID)
-RETURNS SETOF public.notifications
+RETURNS TABLE (
+  id UUID,
+  user_id UUID,
+  actor_id UUID,
+  type TEXT,
+  entity_id UUID,
+  content TEXT,
+  read BOOLEAN,
+  created_at TIMESTAMPTZ
+)
 LANGUAGE sql
 SECURITY DEFINER
 AS $$
-  SELECT * FROM public.notifications
+  SELECT id, user_id, actor_id, type, entity_id, content, read, created_at
+  FROM public.notifications
   WHERE user_id = user_id_param
   ORDER BY created_at DESC;
 $$;

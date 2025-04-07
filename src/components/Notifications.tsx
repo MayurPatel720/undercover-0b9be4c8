@@ -15,8 +15,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
-import { Notification } from '@/lib/database.types';
 import { useToast } from '@/hooks/use-toast';
+
+// Define the Notification type explicitly to match the database structure
+interface Notification {
+  id: string;
+  user_id: string;
+  actor_id: string | null;
+  type: string;
+  entity_id: string | null;
+  content: string;
+  read: boolean;
+  created_at: string;
+}
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -33,17 +44,14 @@ const Notifications = () => {
     // Initial fetch of notifications
     const fetchNotifications = async () => {
       try {
-        // Use the rpc method instead to avoid typing issues
         const { data, error } = await supabase
-          .rpc('get_user_notifications', { user_id_param: user.id })
-          .order('created_at', { ascending: false })
-          .limit(20);
+          .rpc('get_user_notifications', { user_id_param: user.id });
           
         if (error) throw error;
         
         if (data) {
-          setNotifications(data as unknown as Notification[]);
-          setUnreadCount(data.filter((notification: any) => !notification.read).length);
+          setNotifications(data as Notification[]);
+          setUnreadCount(data.filter((notification: Notification) => !notification.read).length);
         }
       } catch (error) {
         console.error('Error fetching notifications:', error);
@@ -92,7 +100,6 @@ const Notifications = () => {
     if (!user || unreadCount === 0) return;
     
     try {
-      // Use rpc method to mark all as read
       const { error } = await supabase
         .rpc('mark_all_notifications_as_read', { user_id_param: user.id });
         
@@ -123,7 +130,6 @@ const Notifications = () => {
     if (!user) return;
     
     try {
-      // Use rpc method to mark a single notification as read
       const { error } = await supabase
         .rpc('mark_notification_as_read', { notification_id_param: id });
         
