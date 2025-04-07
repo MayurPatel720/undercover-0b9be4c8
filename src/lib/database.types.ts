@@ -63,10 +63,23 @@ export interface Story {
   image_url: string;
   created_at: string;
   expires_at: string;
+  viewed_by?: any; // Using 'any' to handle JSONB from Supabase
   viewed?: boolean;
 }
 
 export interface StoryWithUser extends Story {
   username: string;
   avatar_url: string;
+  hasUnseenStory?: boolean;
+}
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: 'post' | 'comment' | 'like' | 'follow' | 'story';
+  content: string;
+  entity_id?: string;
+  actor_id?: string;
+  created_at: string;
+  read: boolean;
 }

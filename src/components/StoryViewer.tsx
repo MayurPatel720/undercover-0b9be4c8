@@ -30,16 +30,13 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  // Effect to fetch all stories for this user
   useEffect(() => {
     if (isOpen && userId) {
       const fetchStories = async () => {
         setLoading(true);
         try {
-          // Get current timestamp
           const now = new Date();
           
-          // Direct query to get stories
           const { data, error } = await supabase
             .from('stories')
             .select('*')
@@ -49,10 +46,8 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
           
           if (error) throw error;
           
-          // Find index of the initialStoryId
           const initialIndex = data?.findIndex((story: any) => story.id === initialStoryId) || 0;
           
-          // Add user info to stories
           const storiesWithUser = data?.map((story: any) => ({
             id: story.id,
             user_id: story.user_id,
@@ -67,7 +62,6 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
           setStories(storiesWithUser);
           setCurrentIndex(initialIndex >= 0 ? initialIndex : 0);
           
-          // Mark this story as viewed
           if (data?.length > 0) {
             await markStoryAsViewed(initialStoryId);
           }
@@ -87,7 +81,6 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
     }
   }, [isOpen, userId, initialStoryId, username, avatarUrl]);
   
-  // Auto progress to next story after 5 seconds
   useEffect(() => {
     if (!loading && stories.length > 0) {
       const timer = setTimeout(() => {
@@ -103,10 +96,9 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
   }, [currentIndex, stories.length, loading]);
 
   const markStoryAsViewed = async (storyId: string) => {
-    if (!user) return;
+    if (!user || !storyId) return;
     
     try {
-      // Get current viewed_by array
       const { data, error: fetchError } = await supabase
         .from('stories')
         .select('viewed_by')
@@ -118,8 +110,8 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
         return;
       }
       
-      // Update viewed_by array if user isn't already in it
-      const viewedBy = data?.viewed_by || [];
+      const viewedBy = Array.isArray(data?.viewed_by) ? data.viewed_by : [];
+      
       if (!viewedBy.includes(user.id)) {
         const updatedViewedBy = [...viewedBy, user.id];
         

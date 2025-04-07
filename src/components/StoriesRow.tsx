@@ -80,7 +80,7 @@ const StoriesRow = () => {
           const avatarUrl = profileData?.avatar_url || getAvatarUrl(username);
           
           // Check if story is viewed by current user
-          const viewed_by = story.viewed_by || [];
+          const viewed_by = Array.isArray(story.viewed_by) ? story.viewed_by : [];
           const isViewed = user ? viewed_by.includes(user.id) : false;
           
           formattedStories.push({
@@ -217,7 +217,8 @@ const StoriesRow = () => {
       }
       
       // Update viewed_by array if user isn't already in it
-      const viewedBy = data?.viewed_by || [];
+      const viewedBy = Array.isArray(data?.viewed_by) ? data.viewed_by : [];
+      
       if (!viewedBy.includes(user.id)) {
         const updatedViewedBy = [...viewedBy, user.id];
         
