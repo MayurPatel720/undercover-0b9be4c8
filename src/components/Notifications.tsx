@@ -161,6 +161,7 @@ const Notifications: React.FC<NotificationsProps> = ({
     // Additional logic to navigate to the relevant content can be added here
   };
 
+  // Add the missing formatTimeAgo function
   const formatTimeAgo = (dateString: string) => {
     const now = new Date();
     const past = new Date(dateString);

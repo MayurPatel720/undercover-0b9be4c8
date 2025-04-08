@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Share2, MoreHorizontal, Sparkles, Reply, Trash, Edit, X } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, Sparkles, Reply, Trash, Edit, X, ImageIcon } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -77,7 +76,6 @@ const Post: React.FC<PostProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { user } = useAuth();
 
-  // Check if the current user is the owner of this post
   const isPostOwner = user && userId && user.id === userId;
 
   useEffect(() => {
@@ -104,7 +102,6 @@ const Post: React.FC<PostProps> = ({
   }, [id, user, realData]);
 
   useEffect(() => {
-    // Set initial content for editing
     setEditedContent(content);
     
     if (realData) {
@@ -402,9 +399,7 @@ const Post: React.FC<PostProps> = ({
     try {
       let imageUrl = image;
       
-      // If image was changed
       if (editImageFile) {
-        // Upload new image
         const fileExt = editImageFile.name.split('.').pop();
         const fileName = `${Math.random().toString(36).slice(2)}.${fileExt}`;
         const filePath = `${user.id}/${fileName}`;
@@ -415,18 +410,15 @@ const Post: React.FC<PostProps> = ({
 
         if (uploadError) throw uploadError;
 
-        // Get the public URL
         const { data } = supabase.storage
           .from('post-images')
           .getPublicUrl(filePath);
 
         imageUrl = data.publicUrl;
       } else if (editImagePreview === null && image) {
-        // Image was removed
         imageUrl = null;
       }
 
-      // Update post
       const { error } = await supabase
         .from('posts')
         .update({
@@ -444,7 +436,6 @@ const Post: React.FC<PostProps> = ({
       
       setShowEditDialog(false);
       
-      // Notify parent component to refresh
       if (onInteractionUpdated) {
         onInteractionUpdated();
       }
@@ -477,7 +468,6 @@ const Post: React.FC<PostProps> = ({
       
       setShowDeleteConfirm(false);
       
-      // Notify parent component to refresh
       if (onInteractionUpdated) {
         onInteractionUpdated();
       }
@@ -743,7 +733,6 @@ const Post: React.FC<PostProps> = ({
         )}
       </CardFooter>
       
-      {/* Edit Post Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -782,7 +771,7 @@ const Post: React.FC<PostProps> = ({
                   onClick={() => document.getElementById('edit-image-upload')?.click()}
                   className="w-full py-8 border-dashed flex flex-col items-center justify-center"
                 >
-                  <Image className="h-10 w-10 mb-2 text-gray-400" />
+                  <ImageIcon className="h-10 w-10 mb-2 text-gray-400" />
                   <span>Click to add an image</span>
                 </Button>
                 <input
@@ -804,7 +793,6 @@ const Post: React.FC<PostProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
