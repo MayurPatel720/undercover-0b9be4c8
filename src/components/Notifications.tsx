@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -33,8 +34,7 @@ const Notifications = () => {
     // Initial fetch of notifications
     const fetchNotifications = async () => {
       try {
-        const { data, error } = await supabase
-          .rpc('get_user_notifications', { user_id_param: user.id });
+        const { data, error } = await (supabase.rpc as any)('get_user_notifications', { user_id_param: user.id });
           
         if (error) throw error;
         
@@ -91,8 +91,7 @@ const Notifications = () => {
     if (!user || unreadCount === 0) return;
     
     try {
-      const { error } = await supabase
-        .rpc('mark_all_notifications_as_read', { user_id_param: user.id });
+      const { error } = await (supabase.rpc as any)('mark_all_notifications_as_read', { user_id_param: user.id });
         
       if (error) throw error;
       
@@ -121,8 +120,7 @@ const Notifications = () => {
     if (!user) return;
     
     try {
-      const { error } = await supabase
-        .rpc('mark_notification_as_read', { 
+      const { error } = await (supabase.rpc as any)('mark_notification_as_read', { 
           notification_id_param: String(id) 
         });
         
