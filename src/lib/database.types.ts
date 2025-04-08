@@ -9,6 +9,12 @@ export interface Post {
   image_url?: string;
   created_at: string;
   updated_at?: string;
+  // Extended properties from posts_with_profiles view
+  username?: string;
+  avatar_url?: string;
+  likes_count?: number;
+  comments_count?: number;
+  shares_count?: number;
 }
 
 export interface Profile {
@@ -17,6 +23,8 @@ export interface Profile {
   avatar_url?: string;
   gender?: string;
   created_at: string;
+  birth_date?: string;
+  mobile_number?: string;
 }
 
 export interface Notification {
@@ -42,4 +50,31 @@ export interface CommentWithProfile {
   gender?: string;
 }
 
-// Add other types as needed
+// Story related types
+export interface Story {
+  id: string;
+  user_id: string;
+  image_url: string;
+  created_at: string;
+  expires_at: string;
+  viewed_by?: string[] | null;
+}
+
+export interface StoryWithUser extends Story {
+  username: string;
+  avatar_url: string;
+  viewed?: boolean;
+  hasUnseenStory?: boolean;
+}
+
+// Profile related types
+export interface UserProfile extends Profile {
+  birth_date?: string;
+  mobile_number?: string;
+}
+
+export interface ProfileStats {
+  posts_count: number;
+  likes_count: number;
+  comments_count: number;
+}
