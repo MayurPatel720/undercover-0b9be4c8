@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Bell, Clock, CheckCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -28,6 +27,19 @@ const NotificationsList = ({ notifications, onMarkAsRead, onClick }: {
       </div>
     );
   }
+
+  const formatTimeAgo = (dateString: string) => {
+    const now = new Date();
+    const past = new Date(dateString);
+    const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`;
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+    
+    return new Date(dateString).toLocaleDateString();
+  };
 
   return (
     <div className="divide-y divide-border">
@@ -138,7 +150,6 @@ const Notifications: React.FC<NotificationsProps> = ({
 
       if (error) throw error;
 
-      // Update local state
       setNotifications(prev => 
         prev ? prev.map(n => n.id === id ? { ...n, read: true } : n) : null
       );
@@ -158,10 +169,8 @@ const Notifications: React.FC<NotificationsProps> = ({
   const handleNotificationClick = (id: string) => {
     markAsRead(id);
     if (onClose) onClose();
-    // Additional logic to navigate to the relevant content can be added here
   };
 
-  // Add the missing formatTimeAgo function
   const formatTimeAgo = (dateString: string) => {
     const now = new Date();
     const past = new Date(dateString);
