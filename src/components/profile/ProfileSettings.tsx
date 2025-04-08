@@ -26,7 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { CalendarIcon, ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client'; // Fixed import path
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { getAvatarUrl } from '@/utils/nameUtils';

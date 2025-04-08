@@ -117,14 +117,13 @@ const Notifications = () => {
     }
   };
 
-  const markAsRead = async (id: string) => {
+  const markAsRead = async (id: string | number) => {
     if (!user) return;
     
     try {
-      // Fix the type issue by explicitly typing notification_id_param
       const { error } = await supabase
         .rpc('mark_notification_as_read', { 
-          notification_id_param: id as unknown as string 
+          notification_id_param: String(id) 
         });
         
       if (error) throw error;
@@ -149,8 +148,9 @@ const Notifications = () => {
   };
 
   const handleNotificationClick = async (notification: Notification) => {
-    // Fix the type issue by explicitly typing notification.id
-    await markAsRead(notification.id as unknown as string);
+    // Convert id to string if needed
+    const notificationId = String(notification.id);
+    await markAsRead(notificationId);
     
     // Navigate based on notification type
     if (notification.entity_id) {

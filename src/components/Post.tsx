@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthModal from './auth/AuthModal';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { CommentWithProfile } from '@/lib/database.types';
 import { generateRandomUsername, getAvatarUrl, getSafeGender } from '@/utils/nameUtils';
 import { 
