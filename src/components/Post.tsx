@@ -566,7 +566,7 @@ const Post: React.FC<PostProps> = ({
                               size="sm"
                               variant="ghost"
                               className="h-auto p-0 text-xs text-gray-500 dark:text-gray-400 hover:text-primary"
-                              onClick={() => handleReply(comment.id)}
+                              onClick={(e) => handleReply(comment.id, e)}
                             >
                               <Reply className="h-3 w-3 mr-1" /> Reply
                             </Button>

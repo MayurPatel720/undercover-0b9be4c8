@@ -57,10 +57,18 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(userProfile?.avatar_url || null);
   
+  // Convert gender string to proper type
+  const getValidGender = (gender: string | undefined): 'male' | 'female' | 'other' => {
+    if (gender === 'male' || gender === 'female' || gender === 'other') {
+      return gender;
+    }
+    return 'other';
+  };
+  
   const form = useForm<FormValues>({
     defaultValues: {
       username: userProfile?.username || '',
-      gender: userProfile?.gender || 'other',
+      gender: getValidGender(userProfile?.gender),
       birthDate: userProfile?.birth_date ? new Date(userProfile.birth_date) : null,
       mobileNumber: userProfile?.mobile_number || '',
     },
@@ -71,7 +79,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
     if (userProfile) {
       form.reset({
         username: userProfile.username || '',
-        gender: userProfile?.gender || 'other',
+        gender: getValidGender(userProfile?.gender),
         birthDate: userProfile.birth_date ? new Date(userProfile.birth_date) : null,
         mobileNumber: userProfile?.mobile_number || '',
       });
@@ -150,7 +158,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
             <div className="relative">
               <Avatar className="h-24 w-24">
                 <AvatarImage 
-                  src={avatarUrl || getAvatarUrl(userProfile?.username || '', userProfile?.gender)}
+                  src={avatarUrl || getAvatarUrl(userProfile?.username || '', getValidGender(userProfile?.gender))}
                   alt={userProfile?.username || 'User'}
                 />
                 <AvatarFallback>

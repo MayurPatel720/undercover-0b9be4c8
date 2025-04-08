@@ -39,8 +39,10 @@ const Notifications = () => {
         if (error) throw error;
         
         if (data) {
-          setNotifications(data as Notification[]);
-          setUnreadCount(data.filter((notification: Notification) => !notification.read).length);
+          // Explicitly cast data to Notification[] to fix TypeScript error
+          const typedData = data as Notification[];
+          setNotifications(typedData);
+          setUnreadCount(typedData.filter(notification => !notification.read).length);
         }
       } catch (error) {
         console.error('Error fetching notifications:', error);
@@ -105,7 +107,7 @@ const Notifications = () => {
       toast({
         title: "All notifications marked as read",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error marking notifications as read:', error);
       toast({
         title: "Error updating notifications",
@@ -133,7 +135,7 @@ const Notifications = () => {
           return notification;
         })
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error marking notification as read:', error);
       toast({
         title: "Error updating notification",
