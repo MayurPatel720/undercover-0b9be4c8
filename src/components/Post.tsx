@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Share2, MoreHorizontal, Sparkles, ExternalLink, Reply } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, Sparkles, Reply } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -146,7 +146,10 @@ const Post: React.FC<PostProps> = ({
     }
   }, [id, showComments, realData]);
 
-  const handleLike = async () => {
+  const handleLike = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (!user) {
       setShowAuthModal(true);
       return;
@@ -222,11 +225,11 @@ const Post: React.FC<PostProps> = ({
         if (profileError) throw profileError;
         
         const username = profileData?.username || 
-                        (user.user_metadata?.anonymous_username || generateRandomUsername());
+                        (user.user_metadata?.username || generateRandomUsername());
         
-        if (!user.user_metadata?.anonymous_username) {
+        if (!user.user_metadata?.username) {
           await supabase.auth.updateUser({
-            data: { anonymous_username: username }
+            data: { username: username }
           });
         }
         
@@ -275,7 +278,7 @@ const Post: React.FC<PostProps> = ({
         setIsSubmitting(false);
       }
     } else {
-      const username = user ? (user.user_metadata?.anonymous_username || generateRandomUsername()) : generateRandomUsername();
+      const username = user ? (user.user_metadata?.username || generateRandomUsername()) : generateRandomUsername();
       const comment: Comment = {
         id: `new-${Date.now()}`,
         avatar: getAvatarUrl(username),
@@ -295,7 +298,9 @@ const Post: React.FC<PostProps> = ({
     }
   };
 
-  const handleReply = (commentId: string) => {
+  const handleReply = (commentId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setReplyingTo(commentId);
     const inputElement = document.getElementById('comment-input');
     if (inputElement) {
@@ -303,7 +308,12 @@ const Post: React.FC<PostProps> = ({
     }
   };
 
-  const handleShare = async (platform?: string) => {
+  const handleShare = async (platform?: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     if (!user && realData) {
       setShowAuthModal(true);
       return;
@@ -427,7 +437,11 @@ const Post: React.FC<PostProps> = ({
               variant="ghost" 
               size="sm" 
               className="rounded-full flex items-center text-gray-700 dark:text-gray-300"
-              onClick={() => setShowComments(!showComments)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowComments(!showComments);
+              }}
             >
               <MessageCircle className="h-5 w-5" />
               <span className="ml-1">{commentCount}</span>
@@ -440,27 +454,31 @@ const Post: React.FC<PostProps> = ({
                 variant="ghost" 
                 size="sm" 
                 className="rounded-full text-gray-700 dark:text-gray-300"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
               >
                 <Share2 className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-              <DropdownMenuItem onClick={() => handleShare()} className="text-gray-700 dark:text-gray-300">
+              <DropdownMenuItem onClick={(e) => handleShare(undefined, e)} className="text-gray-700 dark:text-gray-300">
                 Share to profile
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleShare('whatsapp')} className="text-gray-700 dark:text-gray-300">
+              <DropdownMenuItem onClick={(e) => handleShare('whatsapp', e)} className="text-gray-700 dark:text-gray-300">
                 Share to WhatsApp
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleShare('twitter')} className="text-gray-700 dark:text-gray-300">
+              <DropdownMenuItem onClick={(e) => handleShare('twitter', e)} className="text-gray-700 dark:text-gray-300">
                 Share to Twitter
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleShare('facebook')} className="text-gray-700 dark:text-gray-300">
+              <DropdownMenuItem onClick={(e) => handleShare('facebook', e)} className="text-gray-700 dark:text-gray-300">
                 Share to Facebook
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleShare('telegram')} className="text-gray-700 dark:text-gray-300">
+              <DropdownMenuItem onClick={(e) => handleShare('telegram', e)} className="text-gray-700 dark:text-gray-300">
                 Share to Telegram
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleShare('linkedin')} className="text-gray-700 dark:text-gray-300">
+              <DropdownMenuItem onClick={(e) => handleShare('linkedin', e)} className="text-gray-700 dark:text-gray-300">
                 Share to LinkedIn
               </DropdownMenuItem>
             </DropdownMenuContent>

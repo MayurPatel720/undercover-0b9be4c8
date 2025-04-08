@@ -1,85 +1,45 @@
 
+// This file contains type definitions for the database
+
+// Database tables
 export interface Post {
   id: string;
-  content: string | null;
-  image_url: string | null;
-  created_at: string;
   user_id: string;
-  username: string;
-  avatar_url: string | null;
-  likes_count?: number;
-  comments_count?: number;
-  shares_count?: number;
-}
-
-export interface Comment {
-  id: string;
-  avatar: string;
-  nickname: string;
-  content: string;
-  timestamp: string;
-  parent_id?: string | null;
-}
-
-export interface PostWithProfile extends Post {
-  username: string;
-  avatar_url: string | null;
-  likes_count: number;
-  comments_count: number;
-  shares_count: number;
-}
-
-export interface CommentWithProfile {
-  id: string | null;
-  post_id: string | null;
-  content: string | null;
-  created_at: string | null;
-  user_id: string | null;
-  username: string | null;
-  avatar_url: string | null;
-  parent_id?: string | null;
-  gender?: string | null;
-}
-
-export interface ProfileStats {
-  posts_count: number;
-  likes_count: number;
-  comments_count: number;
-}
-
-export interface UserProfile {
-  id: string;
-  username: string;
-  avatar_url: string | null;
+  content?: string;
+  image_url?: string;
   created_at: string;
-  gender?: 'male' | 'female' | 'other';
-  birth_date?: string | null;
-  mobile_number?: string | null;
+  updated_at?: string;
 }
 
-export interface Story {
+export interface Profile {
   id: string;
-  user_id: string;
-  image_url: string;
-  created_at: string;
-  expires_at: string;
-  viewed_by?: any; // Using 'any' to handle JSONB from Supabase
-  viewed?: boolean;
-}
-
-export interface StoryWithUser extends Story {
   username: string;
-  avatar_url: string;
-  hasUnseenStory?: boolean;
+  avatar_url?: string;
+  gender?: string;
+  created_at: string;
 }
 
 export interface Notification {
   id: string;
   user_id: string;
-  type: 'post' | 'comment' | 'like' | 'follow' | 'story';
+  actor_id: string | null;
+  type: string;
+  entity_id: string | null;
   content: string;
-  entity_id?: string;
-  actor_id?: string;
-  created_at: string;
   read: boolean;
+  created_at: string;
 }
+
+export interface CommentWithProfile {
+  id?: string;
+  content?: string;
+  user_id?: string;
+  post_id?: string;
+  created_at?: string;
+  parent_id?: string | null;
+  username?: string;
+  avatar_url?: string;
+  gender?: string;
+}
+
+// Add other types as needed

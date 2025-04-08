@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Upload, Sparkles } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -76,12 +76,46 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
     });
   };
 
-  const handleAvatarSelect = (url: string) => {
-    onAvatarChange(url);
-    toast({
-      title: 'Avatar selected',
-      description: 'Your new avatar has been selected',
-    });
+  const handleAvatarSelect = async (url: string) => {
+    if (!user) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to change your avatar',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      // Update profile in database
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: url })
+        .eq('id', user.id);
+
+      if (profileError) throw profileError;
+
+      // Update user metadata
+      await supabase.auth.updateUser({
+        data: { avatar_url: url }
+      });
+
+      onAvatarChange(url);
+      
+      toast({
+        title: 'Avatar updated',
+        description: 'Your new avatar has been selected',
+      });
+      
+      onClose();
+    } catch (error: any) {
+      console.error('Error updating avatar:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update avatar. Please try again.',
+        variant: 'destructive'
+      });
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -142,6 +176,19 @@ const AvatarSelector: React.FC<AvatarSelectorProps> = ({
       const { data } = await supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
+      
+      // Update profile in database
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: data.publicUrl })
+        .eq('id', user.id);
+
+      if (profileError) throw profileError;
+
+      // Update user metadata
+      await supabase.auth.updateUser({
+        data: { avatar_url: data.publicUrl }
+      });
         
       onAvatarChange(data.publicUrl);
       

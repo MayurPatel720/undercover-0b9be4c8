@@ -47,7 +47,7 @@ const Header = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Avatar className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-primary transition-all">
-                  <AvatarImage src={user.user_metadata?.avatar_url || getAvatarUrl(generateRandomUsername())} alt={user.user_metadata?.username || 'Avatar'} />
+                  <AvatarImage src={user.user_metadata?.avatar_url || getAvatarUrl(user.user_metadata?.username || generateRandomUsername())} alt={user.user_metadata?.username || 'Avatar'} />
                   <AvatarFallback>{user.user_metadata?.username?.substring(0, 2).toUpperCase() || 'U'}</AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
