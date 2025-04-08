@@ -40,11 +40,16 @@ const Feed = () => {
   useEffect(() => {
     fetchPosts();
 
-    // Subscribe to new posts
+    // Subscribe to new posts, updates, and deletes
     const subscription = supabase
       .channel('public:posts')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, payload => {
-        // Refetch posts when a new one is added
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
+        fetchPosts();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' }, () => {
+        fetchPosts();
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'posts' }, () => {
         fetchPosts();
       })
       .subscribe();

@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Share2, MoreHorizontal, Sparkles, Reply } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, Sparkles, Reply, Trash, Edit, X } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -15,6 +16,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 export interface Comment {
   id: string;
@@ -61,7 +70,15 @@ const Post: React.FC<PostProps> = ({
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editedContent, setEditedContent] = useState('');
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { user } = useAuth();
+
+  // Check if the current user is the owner of this post
+  const isPostOwner = user && userId && user.id === userId;
 
   useEffect(() => {
     if (realData && user) {
@@ -87,6 +104,9 @@ const Post: React.FC<PostProps> = ({
   }, [id, user, realData]);
 
   useEffect(() => {
+    // Set initial content for editing
+    setEditedContent(content);
+    
     if (realData) {
       const fetchCommentCount = async () => {
         try {
@@ -144,7 +164,7 @@ const Post: React.FC<PostProps> = ({
         fetchComments();
       }
     }
-  }, [id, showComments, realData]);
+  }, [id, showComments, realData, content]);
 
   const handleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -347,9 +367,129 @@ const Post: React.FC<PostProps> = ({
     
     toast({
       title: 'Shared!',
-      description: `Post shared to ${platform}`,
+      description: platform ? `Post shared to ${platform}` : 'Post shared',
     });
-    return;
+  };
+
+  const handleOpenEditDialog = () => {
+    setEditedContent(content);
+    if (image) {
+      setEditImagePreview(image);
+    } else {
+      setEditImagePreview(null);
+    }
+    setEditImageFile(null);
+    setShowEditDialog(true);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setEditImageFile(file);
+      setEditImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removeEditImage = () => {
+    setEditImageFile(null);
+    if (editImagePreview) URL.revokeObjectURL(editImagePreview);
+    setEditImagePreview(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!user || !isPostOwner || !realData) return;
+    
+    try {
+      let imageUrl = image;
+      
+      // If image was changed
+      if (editImageFile) {
+        // Upload new image
+        const fileExt = editImageFile.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).slice(2)}.${fileExt}`;
+        const filePath = `${user.id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('post-images')
+          .upload(filePath, editImageFile);
+
+        if (uploadError) throw uploadError;
+
+        // Get the public URL
+        const { data } = supabase.storage
+          .from('post-images')
+          .getPublicUrl(filePath);
+
+        imageUrl = data.publicUrl;
+      } else if (editImagePreview === null && image) {
+        // Image was removed
+        imageUrl = null;
+      }
+
+      // Update post
+      const { error } = await supabase
+        .from('posts')
+        .update({
+          content: editedContent.trim() || null,
+          image_url: imageUrl
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: "Your post has been updated",
+      });
+      
+      setShowEditDialog(false);
+      
+      // Notify parent component to refresh
+      if (onInteractionUpdated) {
+        onInteractionUpdated();
+      }
+      
+    } catch (error: any) {
+      console.error('Error updating post:', error);
+      toast({
+        title: 'Error updating post',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleDeletePost = async () => {
+    if (!user || !isPostOwner || !realData) return;
+    
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Success!",
+        description: "Your post has been deleted",
+      });
+      
+      setShowDeleteConfirm(false);
+      
+      // Notify parent component to refresh
+      if (onInteractionUpdated) {
+        onInteractionUpdated();
+      }
+      
+    } catch (error: any) {
+      console.error('Error deleting post:', error);
+      toast({
+        title: 'Error deleting post',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
   };
 
   const formatTimeAgo = (dateString: string) => {
@@ -399,9 +539,30 @@ const Post: React.FC<PostProps> = ({
             <span className="text-xs text-gray-600 dark:text-muted-foreground">{timestamp}</span>
           </div>
         </div>
-        <Button variant="ghost" size="icon" className="rounded-full">
-          <MoreHorizontal className="h-5 w-5" />
-        </Button>
+        
+        {isPostOwner ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <MoreHorizontal className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleOpenEditDialog}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Post
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-red-600">
+                <Trash className="mr-2 h-4 w-4" />
+                Delete Post
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <Button variant="ghost" size="icon" className="rounded-full">
+            <MoreHorizontal className="h-5 w-5" />
+          </Button>
+        )}
       </CardHeader>
       
       <CardContent className="p-4 pt-2">
@@ -581,6 +742,85 @@ const Post: React.FC<PostProps> = ({
           </div>
         )}
       </CardFooter>
+      
+      {/* Edit Post Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Post</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Textarea
+              value={editedContent}
+              onChange={(e) => setEditedContent(e.target.value)}
+              placeholder="What's on your mind?"
+              className="w-full min-h-[100px] resize-none"
+            />
+            
+            {editImagePreview ? (
+              <div className="relative mb-3 rounded-xl overflow-hidden">
+                <img 
+                  src={editImagePreview} 
+                  alt="Post preview" 
+                  className="max-h-64 w-full object-contain bg-gray-100"
+                />
+                <Button 
+                  type="button"
+                  variant="destructive" 
+                  size="icon"
+                  className="absolute top-2 right-2 rounded-full"
+                  onClick={removeEditImage}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById('edit-image-upload')?.click()}
+                  className="w-full py-8 border-dashed flex flex-col items-center justify-center"
+                >
+                  <Image className="h-10 w-10 mb-2 text-gray-400" />
+                  <span>Click to add an image</span>
+                </Button>
+                <input
+                  id="edit-image-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Delete Post</DialogTitle>
+          </DialogHeader>
+          <p className="py-4">Are you sure you want to delete this post? This action cannot be undone.</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeletePost}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </Card>
