@@ -16,18 +16,7 @@ import { supabase } from '@/lib/supabase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-
-// Define the Notification type explicitly to match the database structure
-interface Notification {
-  id: string;
-  user_id: string;
-  actor_id: string | null;
-  type: string;
-  entity_id: string | null;
-  content: string;
-  read: boolean;
-  created_at: string;
-}
+import { Notification } from '@/lib/database.types';
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);

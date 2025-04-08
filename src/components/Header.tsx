@@ -37,7 +37,7 @@ const Header = () => {
     <header className="fixed top-0 left-0 w-full z-50 bg-background/95 border-b border-border backdrop-blur-sm">
       <div className="flex justify-between items-center h-14 px-4 max-w-screen-xl mx-auto">
         <Link to="/" className="flex items-center font-semibold">
-          <span className="text-2xl font-bold bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-500 bg-clip-text text-transparent">Undercover</span>
+          <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 via-blue-500 to-indigo-400 bg-clip-text text-transparent">Undercover</span>
         </Link>
         
         <div className="flex items-center space-x-4">

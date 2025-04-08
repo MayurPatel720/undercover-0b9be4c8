@@ -10,6 +10,7 @@ import ProfilePage from "./pages/ProfilePage";
 import DiscoverPage from "./pages/DiscoverPage";
 import TrendingPage from "./pages/TrendingPage";
 import NotFound from "./pages/NotFound";
+import AuthPage from "./pages/AuthPage";
 import { AuthProvider } from "./contexts/AuthContext";
 import React from 'react';
 
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/discover" element={<DiscoverPage />} />
             <Route path="/trending" element={<TrendingPage />} />
+            <Route path="/auth" element={<AuthPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
