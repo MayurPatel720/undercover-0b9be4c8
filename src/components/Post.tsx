@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Share2, MoreHorizontal, Sparkles, Reply, Trash, Edit, X, ImageIcon } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -70,7 +71,7 @@ const Post: React.FC<PostProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [editedContent, setEditedContent] = useState('');
+  const [editedContent, setEditedContent] = useState(content);
   const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -164,6 +165,7 @@ const Post: React.FC<PostProps> = ({
   }, [id, showComments, realData, content]);
 
   const handleLike = async (e: React.MouseEvent) => {
+    // Prevent default to stop page refresh
     e.preventDefault();
     e.stopPropagation();
     
@@ -175,17 +177,27 @@ const Post: React.FC<PostProps> = ({
     if (realData) {
       try {
         if (liked) {
+          // Optimistic UI update
+          setLikes(prev => Math.max(0, prev - 1));
+          setLiked(false);
+          
           const { error } = await supabase
             .from('likes')
             .delete()
             .eq('post_id', id)
             .eq('user_id', user.id);
           
-          if (error) throw error;
-          
-          setLikes(prev => Math.max(0, prev - 1));
-          setLiked(false);
+          if (error) {
+            // Revert on error
+            setLikes(prev => prev + 1);
+            setLiked(true);
+            throw error;
+          }
         } else {
+          // Optimistic UI update
+          setLikes(prev => prev + 1);
+          setLiked(true);
+          
           const { error } = await supabase
             .from('likes')
             .insert({
@@ -193,10 +205,12 @@ const Post: React.FC<PostProps> = ({
               user_id: user.id
             });
             
-          if (error) throw error;
-          
-          setLikes(prev => prev + 1);
-          setLiked(true);
+          if (error) {
+            // Revert on error
+            setLikes(prev => Math.max(0, prev - 1));
+            setLiked(false);
+            throw error;
+          }
         }
         
         if (onInteractionUpdated) {
@@ -211,6 +225,7 @@ const Post: React.FC<PostProps> = ({
         });
       }
     } else {
+      // For demo mode
       if (liked) {
         setLikes(prev => prev - 1);
       } else {
@@ -416,9 +431,11 @@ const Post: React.FC<PostProps> = ({
 
         imageUrl = data.publicUrl;
       } else if (editImagePreview === null && image) {
+        // If image was removed
         imageUrl = null;
       }
 
+      // Update post in Supabase
       const { error } = await supabase
         .from('posts')
         .update({
@@ -429,6 +446,7 @@ const Post: React.FC<PostProps> = ({
 
       if (error) throw error;
 
+      // Update UI locally without requiring a refresh
       toast({
         title: "Success!",
         description: "Your post has been updated",
@@ -436,6 +454,7 @@ const Post: React.FC<PostProps> = ({
       
       setShowEditDialog(false);
       
+      // Notify parent component to update if needed
       if (onInteractionUpdated) {
         onInteractionUpdated();
       }
@@ -455,9 +474,9 @@ const Post: React.FC<PostProps> = ({
     
     try {
       const { error } = await supabase
-        .from('posts')
-        .delete()
-        .eq('id', id);
+      .from('posts')
+      .delete()
+      .eq('id',id);
         
       if (error) throw error;
       
@@ -533,23 +552,44 @@ const Post: React.FC<PostProps> = ({
         {isPostOwner ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-full"
+                onClick={(e) => e.stopPropagation()} // Stop propagation to prevent page refresh
+              >
                 <MoreHorizontal className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleOpenEditDialog}>
+              <DropdownMenuItem onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleOpenEditDialog();
+              }}>
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Post
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowDeleteConfirm(true)} className="text-red-600">
+              <DropdownMenuItem 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowDeleteConfirm(true);
+                }} 
+                className="text-red-600"
+              >
                 <Trash className="mr-2 h-4 w-4" />
                 Delete Post
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <Button variant="ghost" size="icon" className="rounded-full">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full"
+            onClick={(e) => e.stopPropagation()}
+          >
             <MoreHorizontal className="h-5 w-5" />
           </Button>
         )}
@@ -652,6 +692,7 @@ const Post: React.FC<PostProps> = ({
                 variant="ghost" 
                 className="rounded-full ml-2 bg-primary/10 text-primary hover:bg-primary/20"
                 disabled={!newComment.trim() || isSubmitting}
+                onClick={(e) => e.stopPropagation()}
               >
                 {isSubmitting ? 'Posting...' : replyingTo ? 'Reply' : 'Post'}
               </Button>
@@ -661,7 +702,11 @@ const Post: React.FC<PostProps> = ({
                   variant="ghost"
                   size="sm"
                   className="rounded-full ml-1"
-                  onClick={() => setReplyingTo(null)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setReplyingTo(null);
+                  }}
                 >
                   Cancel
                 </Button>
@@ -734,7 +779,7 @@ const Post: React.FC<PostProps> = ({
       </CardFooter>
       
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px]" onClick={(e) => e.stopPropagation()}>
           <DialogHeader>
             <DialogTitle>Edit Post</DialogTitle>
           </DialogHeader>
@@ -758,7 +803,11 @@ const Post: React.FC<PostProps> = ({
                   variant="destructive" 
                   size="icon"
                   className="absolute top-2 right-2 rounded-full"
-                  onClick={removeEditImage}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    removeEditImage();
+                  }}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -768,7 +817,11 @@ const Post: React.FC<PostProps> = ({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => document.getElementById('edit-image-upload')?.click()}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    document.getElementById('edit-image-upload')?.click();
+                  }}
                   className="w-full py-8 border-dashed flex flex-col items-center justify-center"
                 >
                   <ImageIcon className="h-10 w-10 mb-2 text-gray-400" />
@@ -783,36 +836,48 @@ const Post: React.FC<PostProps> = ({
                 />
               </div>
             )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveEdit}>Save Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+             </div>
 
-      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>Delete Post</DialogTitle>
-          </DialogHeader>
-          <p className="py-4">Are you sure you want to delete this post? This action cannot be undone.</p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeletePost}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
-    </Card>
-  );
+<DialogFooter>
+  <Button type="button" variant="secondary" onClick={() => setShowEditDialog(false)}>
+    Cancel
+  </Button>
+  <Button type="button" variant="default" onClick={handleSaveEdit}>
+    Save Changes
+  </Button>
+</DialogFooter>
+</DialogContent>
+</Dialog>
+
+<Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+<DialogContent className="sm:max-w-[425px]" onClick={(e) => e.stopPropagation()}>
+<DialogHeader>
+  <DialogTitle>Delete Post</DialogTitle>
+</DialogHeader>
+<div className="py-4">
+  <p className="text-gray-700 dark:text-gray-300">
+    Are you sure you want to delete this post? This action cannot be undone.
+  </p>
+</div>
+<DialogFooter>
+  <Button type="button" variant="secondary" onClick={() => setShowDeleteConfirm(false)}>
+    Cancel
+  </Button>
+  <Button type="button" variant="destructive" onClick={handleDeletePost}>
+    Delete
+  </Button>
+</DialogFooter>
+</DialogContent>
+</Dialog>
+
+{showAuthModal && (
+<AuthModal 
+isOpen={showAuthModal} 
+onClose={() => setShowAuthModal(false)} 
+/>
+)}
+</Card>
+);
 };
 
-export default Post;
+export default Post

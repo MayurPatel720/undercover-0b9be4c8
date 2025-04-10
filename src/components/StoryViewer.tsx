@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -36,18 +38,18 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
         setLoading(true);
         try {
           const now = new Date();
-          
+
           const { data, error } = await supabase
             .from('stories')
             .select('*')
             .eq('user_id', userId)
             .gte('expires_at', now.toISOString())
             .order('created_at', { ascending: true });
-          
+
           if (error) throw error;
-          
+
           const initialIndex = data?.findIndex((story: any) => story.id === initialStoryId) || 0;
-          
+
           const storiesWithUser = data?.map((story: any) => ({
             id: story.id,
             user_id: story.user_id,
@@ -58,10 +60,10 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
             avatar_url: avatarUrl,
             viewed: false
           })) || [];
-          
+
           setStories(storiesWithUser);
           setCurrentIndex(initialIndex >= 0 ? initialIndex : 0);
-          
+
           if (data?.length > 0) {
             await markStoryAsViewed(initialStoryId);
           }
@@ -76,11 +78,11 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
           setLoading(false);
         }
       };
-      
+
       fetchStories();
     }
   }, [isOpen, userId, initialStoryId, username, avatarUrl]);
-  
+
   useEffect(() => {
     if (!loading && stories.length > 0) {
       const timer = setTimeout(() => {
@@ -90,36 +92,36 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
           onClose();
         }
       }, 5000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [currentIndex, stories.length, loading]);
 
   const markStoryAsViewed = async (storyId: string) => {
     if (!user || !storyId) return;
-    
+
     try {
       const { data, error: fetchError } = await supabase
         .from('stories')
         .select('viewed_by')
         .eq('id', storyId)
         .single();
-        
+
       if (fetchError) {
         console.error('Error fetching viewed_by:', fetchError);
         return;
       }
-      
+
       const viewedBy = Array.isArray(data?.viewed_by) ? data.viewed_by : [];
-      
+
       if (!viewedBy.includes(user.id)) {
         const updatedViewedBy = [...viewedBy, user.id];
-        
+
         const { error: updateError } = await supabase
           .from('stories')
           .update({ viewed_by: updatedViewedBy })
           .eq('id', storyId);
-          
+
         if (updateError) {
           console.error('Error updating viewed_by:', updateError);
         }
@@ -166,46 +168,47 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
               className="w-full h-full object-cover"
             />
           )}
-          
+
+          {/* Progress Bars */}
           <div className="absolute top-0 left-0 right-0 flex p-1 space-x-1">
-            {stories.map((_, index) => (
-              <div
-                key={index}
-                className={`h-1 flex-1 rounded-full ${
-                  index < currentIndex 
-                    ? 'bg-white' 
-                    : index === currentIndex 
-                    ? 'bg-white' 
-                    : 'bg-white/30'
-                }`}
-                style={{
-                  animation: index === currentIndex ? 'progress 5s linear forwards' : undefined
-                }}
-              />
-            ))}
-          </div>
-          
-          <div className="absolute top-0 left-0 right-0 p-4 flex items-center">
+  {stories.map((_, index) => (
+    <div
+      key={index}
+      className="relative h-1 flex-1 rounded-full bg-white/30 overflow-hidden"
+    >
+      {index < currentIndex && (
+        <div className="absolute left-0 top-0 h-full w-full bg-blue-500" />
+      )}
+      {index === currentIndex && (
+        <div
+          className="absolute left-0 top-0 h-full bg-blue-500 animate-progress"
+          style={{ animationDuration: '5s', width: '100%' }}
+        />
+      )}
+    </div>
+  ))}
+</div>
+
+
+
+          <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white">
-                <img 
-                  src={currentStory?.avatar_url || getAvatarUrl(currentStory?.username || 'user', 'other')} 
-                  alt={currentStory?.username} 
+                <img
+                  src={currentStory?.avatar_url || getAvatarUrl(currentStory?.username || 'user', 'other')}
+                  alt={currentStory?.username}
                   className="w-full h-full object-cover"
                 />
               </div>
               <span className="font-semibold text-white drop-shadow-md">{currentStory?.username}</span>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="ml-auto text-white hover:bg-black/20"
+            <button
               onClick={onClose}
+              className="rounded-full w-5 h-5 p-1.5 bg-white/20 text-white hover:bg-white/40 dark:bg-black/40 dark:hover:bg-black/60 transition"
             >
-              <X className="h-5 w-5" />
-            </Button>
+            </button>
           </div>
-          
+
           <Button
             variant="ghost"
             size="icon"
@@ -224,7 +227,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
           >
             <ArrowRight className="h-8 w-8" />
           </Button>
-          
+
           <style>
             {`
               @keyframes progress {
@@ -240,3 +243,16 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
 };
 
 export default StoryViewer;
+<style>
+  {`
+    @keyframes progress {
+      from { transform: scaleX(0); }
+      to { transform: scaleX(1); }
+    }
+
+    .animate-progress {
+      transform-origin: left;
+      animation: progress 5s linear forwards;
+    }
+  `}
+</style>

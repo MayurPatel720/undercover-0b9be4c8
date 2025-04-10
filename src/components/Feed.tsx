@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { useState, useEffect } from 'react';
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -40,7 +41,6 @@ const Feed = () => {
   useEffect(() => {
     fetchPosts();
 
-    // Subscribe to new posts, updates, and deletes
     const subscription = supabase
       .channel('public:posts')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
@@ -75,7 +75,7 @@ const Feed = () => {
 
   return (
     <ScrollArea className="h-[calc(100vh-80px)] w-full">
-      <div className="w-full border-b border-border bg-white/5 backdrop-blur-sm">
+      <div className="w-full border-b border-border bg-white/0 backdrop-blur-sm">
         <StoriesRow />
       </div>
       <div className="max-w-lg w-full mx-auto py-3 px-4 sm:px-4">
